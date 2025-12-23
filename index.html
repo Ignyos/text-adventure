@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Adventure Player</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="toast-container"></div>
+    
+    <div id="app">
+        <!-- Main Menu Screen -->
+        <div id="menu-screen" class="screen">
+            <div class="menu-container">
+                <h1>Text Adventure Player</h1>
+                <div class="menu-buttons">
+                    <button id="new-game-btn" class="menu-btn">New Game</button>
+                    <button id="continue-btn" class="menu-btn">Continue Game</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Selection Screen -->
+        <div id="game-select-screen" class="screen hidden">
+            <div class="menu-container">
+                <h2>Select a Game</h2>
+                <div id="game-list" class="selection-list"></div>
+                <button id="back-to-menu-btn" class="menu-btn">Back</button>
+            </div>
+        </div>
+
+        <!-- Save Selection Screen -->
+        <div id="save-select-screen" class="screen hidden">
+            <div class="menu-container">
+                <h2>Continue Game</h2>
+                <div id="save-list" class="selection-list"></div>
+                <button id="back-to-menu-btn-2" class="menu-btn">Back</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen hidden">
+            <div id="output-section"></div>
+            <div id="input-section">
+                <span class="prompt">&gt;</span>
+                <input title="Command Input" type="text" id="command-input" maxlength="200" autocomplete="off" spellcheck="false">
+            </div>
+        </div>
+    </div>
+
+    <script src="models/location.js"></script>
+    <script src="models/generic-item.js"></script>
+    <script src="models/unique-item.js"></script>
+    <script src="models/game-state.js"></script>
+    <script src="models/game.js"></script>
+    <script src="models/game-builder.js"></script>
+    <script src="games/demo-game.js"></script>
+    <script src="game-registry.js"></script>
+    <script src="storage.js"></script>
+    <script src="game-engine.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
