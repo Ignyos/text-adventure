@@ -24,6 +24,11 @@ class UniqueItem {
         this.isContainer = data.isContainer || false;                        // Can hold generic items?
         this.contents = data.contents || [];                                 // [{itemId, quantity}]
         this.containerCapacity = data.containerCapacity || null;             // Max items (null = unlimited)
+        this.isLocked = data.isLocked || false;                              // Initially locked?
+        this.isClosed = data.isClosed !== undefined ? data.isClosed : true;  // Initially closed?
+        this.requiredKey = data.requiredKey || null;                         // Item ID needed to unlock
+        this.lockedMessage = data.lockedMessage || null;                     // Message when locked
+        this.closedMessage = data.closedMessage || null;                     // Message when closed
         
         // Interaction text
         this.examineText = data.examineText || this.description;  // Detail when examined
@@ -116,6 +121,11 @@ class UniqueItem {
             isContainer: this.isContainer,
             contents: this.contents,
             containerCapacity: this.containerCapacity,
+            isLocked: this.isLocked,
+            isClosed: this.isClosed,
+            requiredKey: this.requiredKey,
+            lockedMessage: this.lockedMessage,
+            closedMessage: this.closedMessage,
             examineText: this.examineText,
             takeText: this.takeText,
             dropText: this.dropText,

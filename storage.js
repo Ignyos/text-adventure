@@ -2,7 +2,7 @@
 class StorageManager {
     constructor() {
         this.dbName = 'ignyos.text-adventure';
-        this.dbVersion = 3;  // Incremented for game-drafts store
+        this.dbVersion = 4;  // Incremented for players store
         this.db = null;
     }
 
@@ -42,6 +42,14 @@ class StorageManager {
                     const draftStore = db.createObjectStore('game-drafts', { keyPath: 'id' });
                     draftStore.createIndex('lastModified', 'lastModified', { unique: false });
                     draftStore.createIndex('title', 'title', { unique: false });
+                }
+                
+                // Create object store for players
+                if (!db.objectStoreNames.contains('players')) {
+                    const playerStore = db.createObjectStore('players', { keyPath: 'id' });
+                    playerStore.createIndex('name', 'name', { unique: false });
+                    playerStore.createIndex('createDate', 'createDate', { unique: false });
+                    playerStore.createIndex('lastActive', 'lastActive', { unique: false });
                 }
             };
         });
@@ -309,6 +317,83 @@ class StorageManager {
             } catch (error) {
                 reject(`Failed to publish draft: ${error}`);
             }
+        });
+    }
+    
+    // ===== Player Store Methods =====
+    
+    // Save or update a player
+    async savePlayer(playerData) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['players'], 'readwrite');
+            const store = transaction.objectStore('players');
+            const request = store.put(playerData);
+            
+            request.onsuccess = () => {
+                resolve();
+            };
+            
+            request.onerror = () => {
+                reject('Failed to save player');
+            };
+        });
+    }
+    
+    // Get a player by ID
+    async getPlayer(playerId) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['players'], 'readonly');
+            const store = transaction.objectStore('players');
+            const request = store.get(playerId);
+            
+            request.onsuccess = () => {
+                const data = request.result;
+                resolve(data ? new Player(data) : null);
+            };
+            
+            request.onerror = () => {
+                reject('Failed to retrieve player');
+            };
+        });
+    }
+    
+    // Get all players
+    async getAllPlayers() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['players'], 'readonly');
+            const store = transaction.objectStore('players');
+            const request = store.getAll();
+            
+            request.onsuccess = () => {
+                // Convert to Player instances and sort by lastActive descending
+                const players = request.result
+                    .map(data => new Player(data))
+                    .sort((a, b) => 
+                        new Date(b.lastActive) - new Date(a.lastActive)
+                    );
+                resolve(players);
+            };
+            
+            request.onerror = () => {
+                reject('Failed to retrieve players');
+            };
+        });
+    }
+    
+    // Delete a player by ID
+    async deletePlayer(playerId) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['players'], 'readwrite');
+            const store = transaction.objectStore('players');
+            const request = store.delete(playerId);
+            
+            request.onsuccess = () => {
+                resolve();
+            };
+            
+            request.onerror = () => {
+                reject('Failed to delete player');
+            };
         });
     }
 }

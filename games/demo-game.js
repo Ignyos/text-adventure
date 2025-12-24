@@ -116,12 +116,17 @@ function getDemoGame() {
         takeable: false,
         visible: true,
         isContainer: true,
+        isLocked: true,
+        isClosed: true,
+        requiredKey: 'iron-key',
         contents: [
             { itemId: 'gold-coin', quantity: 100 },
             { itemId: 'gem', quantity: 25 }
         ],
         examineText: 'The chest is beautifully carved with intricate patterns. It has a heavy iron padlock.',
-        openText: 'You unlock the chest with the iron key. Inside you find treasure!',
+        openText: 'You open the chest.',
+        lockedMessage: 'The chest is locked with a heavy iron padlock.',
+        closedMessage: 'The chest is closed.',
         cantTakeText: "The chest is far too heavy to carry."
     });
     

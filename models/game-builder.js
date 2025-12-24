@@ -120,6 +120,15 @@ class GameBuilder {
                 error: `Location is referenced by exits from: ${referencedBy.join(', ')}` 
             };
         }
+
+        // Check if any items are located here
+        const itemsHere = this.uniqueItems.filter(item => item.location === locationId);
+        if (itemsHere.length > 0) {
+            return { 
+                success: false, 
+                error: `Location has items: ${itemsHere.map(i => i.id).join(', ')}` 
+            };
+        }
         
         this.locations.splice(index, 1);
         return { success: true };

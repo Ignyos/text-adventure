@@ -19,6 +19,7 @@ class TextAdventureApp {
         this.menuScreen = document.getElementById('menu-screen');
         this.gameSelectScreen = document.getElementById('game-select-screen');
         this.saveSelectScreen = document.getElementById('save-select-screen');
+        this.playerSelectScreen = document.getElementById('player-select-screen');
         this.gameScreen = document.getElementById('game-screen');
 
         // Buttons
@@ -26,17 +27,31 @@ class TextAdventureApp {
         this.continueBtn = document.getElementById('continue-btn');
         this.backToMenuBtn = document.getElementById('back-to-menu-btn');
         this.backToMenuBtn2 = document.getElementById('back-to-menu-btn-2');
+        this.backToGamesBtn = document.getElementById('back-to-games-btn');
+        this.addNewPlayerBtn = document.getElementById('add-new-player-btn');
+        this.addExistingPlayerBtn = document.getElementById('add-existing-player-btn');
+        this.startGameBtn = document.getElementById('start-game-btn');
 
         // Lists
         this.gameList = document.getElementById('game-list');
         this.saveList = document.getElementById('save-list');
+        this.selectedPlayersList = document.getElementById('selected-players-list');
+        this.existingPlayersSelect = document.getElementById('existing-players-select');
+
+        // Input elements
+        this.playerNameInput = document.getElementById('player-name-input');
+        this.commandInput = document.getElementById('command-input');
 
         // Game elements
         this.outputSection = document.getElementById('output-section');
-        this.commandInput = document.getElementById('command-input');
+        this.turnIndicator = document.getElementById('turn-indicator');
         
         // Toast container
         this.toastContainer = document.getElementById('toast-container');
+        
+        // Game session state
+        this.selectedGame = null;
+        this.selectedPlayers = [];
     }
 
     // Setup global error handling
@@ -75,6 +90,17 @@ class TextAdventureApp {
         this.continueBtn.addEventListener('click', () => this.showSaveSelect());
         this.backToMenuBtn.addEventListener('click', () => this.showMenu());
         this.backToMenuBtn2.addEventListener('click', () => this.showMenu());
+        this.backToGamesBtn.addEventListener('click', () => this.showGameSelect());
+        
+        this.addNewPlayerBtn.addEventListener('click', () => this.addNewPlayer());
+        this.addExistingPlayerBtn.addEventListener('click', () => this.addExistingPlayer());
+        this.startGameBtn.addEventListener('click', () => this.startGameWithPlayers());
+        
+        this.playerNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.addNewPlayer();
+            }
+        });
         
         this.commandInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -180,7 +206,7 @@ class TextAdventureApp {
                 <div class="selection-item-title">${game.title}</div>
                 <div class="selection-item-info">${game.description}</div>
             `;
-            item.addEventListener('click', () => this.startNewGame(game));
+            item.addEventListener('click', () => this.selectGameForPlayers(game));
             this.gameList.appendChild(item);
         });
     }
@@ -217,7 +243,209 @@ class TextAdventureApp {
         }
     }
 
-    // Start a new game
+    // Select game and proceed to player selection
+    async selectGameForPlayers(game) {
+        this.selectedGame = game;
+        this.selectedPlayers = [];
+        await this.showPlayerSelect();
+    }
+
+    // Show player selection screen
+    async showPlayerSelect() {
+        this.hideAllScreens();
+        this.playerSelectScreen.classList.remove('hidden');
+        
+        // Load existing players for dropdown
+        await this.populateExistingPlayers();
+        
+        // Clear input and selected players list
+        this.playerNameInput.value = '';
+        this.updateSelectedPlayersList();
+        this.startGameBtn.disabled = true;
+    }
+
+    // Populate existing players dropdown
+    async populateExistingPlayers() {
+        try {
+            const players = await this.storage.getAllPlayers();
+            
+            // Get IDs of already selected players
+            const selectedPlayerIds = this.selectedPlayers.map(p => p.id);
+            
+            // Filter out already selected players
+            const availablePlayers = players.filter(p => !selectedPlayerIds.includes(p.id));
+            
+            this.existingPlayersSelect.innerHTML = '<option value="">Select existing player...</option>';
+            
+            availablePlayers.forEach(player => {
+                const option = document.createElement('option');
+                option.value = player.id;
+                option.textContent = player.name;
+                this.existingPlayersSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading players:', error);
+            this.showToast('Failed to load existing players.', 'error');
+        }
+    }
+
+    // Add a new player
+    async addNewPlayer() {
+        const name = this.playerNameInput.value.trim();
+        
+        if (!name) {
+            this.showToast('Please enter a player name.', 'error');
+            return;
+        }
+        
+        // Check if player with this name already added
+        if (this.selectedPlayers.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+            this.showToast('A player with this name is already added.', 'error');
+            return;
+        }
+        
+        try {
+            // Create and save new player
+            const newPlayer = new Player({ name: name });
+            await this.storage.savePlayer(newPlayer);
+            
+            // Add to selected players
+            this.selectedPlayers.push(newPlayer);
+            
+            // Update UI
+            this.playerNameInput.value = '';
+            this.updateSelectedPlayersList();
+            await this.populateExistingPlayers();
+            
+            this.showToast(`${name} added!`, 'success');
+        } catch (error) {
+            console.error('Error adding player:', error);
+            this.showToast('Failed to add player.', 'error');
+        }
+    }
+
+    // Add an existing player
+    async addExistingPlayer() {
+        const playerId = this.existingPlayersSelect.value;
+        
+        if (!playerId) {
+            this.showToast('Please select a player.', 'error');
+            return;
+        }
+        
+        // Check if player already added
+        if (this.selectedPlayers.some(p => p.id === playerId)) {
+            this.showToast('This player is already added.', 'error');
+            return;
+        }
+        
+        try {
+            const player = await this.storage.getPlayer(playerId);
+            
+            if (!player) {
+                this.showToast('Player not found.', 'error');
+                return;
+            }
+            
+            // Update last active
+            player.updateActivity();
+            await this.storage.savePlayer(player);
+            
+            // Add to selected players
+            this.selectedPlayers.push(player);
+            
+            // Update UI
+            this.existingPlayersSelect.value = '';
+            this.updateSelectedPlayersList();
+            await this.populateExistingPlayers();
+            
+            this.showToast(`${player.name} added!`, 'success');
+        } catch (error) {
+            console.error('Error adding player:', error);
+            this.showToast('Failed to add player.', 'error');
+        }
+    }
+
+    // Remove a player from selected list
+    async removePlayer(playerId) {
+        this.selectedPlayers = this.selectedPlayers.filter(p => p.id !== playerId);
+        this.updateSelectedPlayersList();
+        await this.populateExistingPlayers();
+    }
+
+    // Update the selected players list UI
+    updateSelectedPlayersList() {
+        this.selectedPlayersList.innerHTML = '';
+        
+        if (this.selectedPlayers.length === 0) {
+            this.selectedPlayersList.innerHTML = '<div class="no-items-message">No players added yet.</div>';
+            this.startGameBtn.disabled = true;
+            return;
+        }
+        
+        this.selectedPlayers.forEach((player, index) => {
+            const playerItem = document.createElement('div');
+            playerItem.className = 'player-item';
+            playerItem.innerHTML = `
+                <span class="player-name">${player.name}</span>
+                <span class="player-order">Player ${index + 1}</span>
+                <button class="remove-player-btn\" data-player-id="${player.id}">×</button>
+            `;
+            
+            const removeBtn = playerItem.querySelector('.remove-player-btn');
+            removeBtn.addEventListener('click', () => this.removePlayer(player.id));
+            
+            this.selectedPlayersList.appendChild(playerItem);
+        });
+        
+        this.startGameBtn.disabled = false;
+    }
+
+    // Start game with selected players
+    async startGameWithPlayers() {
+        if (this.selectedPlayers.length === 0) {
+            this.showToast('Please add at least one player.', 'error');
+            return;
+        }
+        
+        try {
+            // Load game data from IndexedDB
+            const gameRecord = await this.storage.getGame(this.selectedGame.id);
+            
+            if (!gameRecord || !gameRecord.gameData) {
+                this.showToast('Game data not found!', 'error');
+                return;
+            }
+
+            // Reconstruct Game instance from stored data
+            const gameInstance = new Game(gameRecord.gameData);
+
+            this.currentGameId = this.selectedGame.id;
+            this.currentSaveId = null;
+            this.gameEngine = new GameEngine(gameInstance);
+            
+            // Initialize game state
+            this.gameEngine.initState();
+            
+            // Add all selected players to the game state
+            this.selectedPlayers.forEach(player => {
+                this.gameEngine.state.addPlayer(player.id, gameInstance.startLocation);
+            });
+
+            this.showGameScreen();
+            this.clearOutput();
+            this.addOutput(this.gameEngine.getStartText(), 'game-output');
+            this.updateTurnIndicator();
+            
+            // Save initial state
+            await this.saveGame();
+        } catch (error) {
+            console.error('Error starting game:', error);
+            this.showToast('Failed to start game. Please try again.', 'error');
+        }
+    }
+
+    // Start a new game (legacy single-player - kept for backward compatibility)
     async startNewGame(game) {
         try {
             // Load game data from IndexedDB
@@ -234,7 +462,13 @@ class TextAdventureApp {
             this.currentGameId = game.id;
             this.currentSaveId = null;
             this.gameEngine = new GameEngine(gameInstance);
+            
+            // Create default player for single-player games
+            const defaultPlayer = new Player("Player 1");
+            await this.storage.savePlayer(defaultPlayer);
+            
             this.gameEngine.initState();
+            this.gameEngine.state.addPlayer(defaultPlayer.id, gameInstance.startLocation);
 
             this.showGameScreen();
             this.clearOutput();
@@ -267,13 +501,68 @@ class TextAdventureApp {
             this.gameEngine = new GameEngine(gameInstance);
             this.gameEngine.initState(save.gameState);
 
+            // Load player objects for all players in the saved game
+            this.selectedPlayers = [];
+            if (save.gameState.players && Object.keys(save.gameState.players).length > 0) {
+                // New multiplayer save format
+                for (const playerId of Object.keys(save.gameState.players)) {
+                    try {
+                        // Check if this is a legacy player ID
+                        if (playerId.startsWith('legacy-player-')) {
+                            // Create a temporary player object for display
+                            this.selectedPlayers.push(new Player({
+                                id: playerId,
+                                name: 'Player'
+                            }));
+                        } else {
+                            const player = await this.storage.getPlayer(playerId);
+                            if (player) {
+                                this.selectedPlayers.push(player);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Failed to load player ${playerId}:`, error);
+                    }
+                }
+            } else {
+                // Very old save format without players - create a default player
+                const defaultPlayer = new Player({ name: 'Player' });
+                this.selectedPlayers.push(defaultPlayer);
+            }
+
             this.showGameScreen();
             this.clearOutput();
             this.addOutput('=== Game Loaded ===\n', 'system-message');
             this.addOutput(this.gameEngine.getLocationDescription(), 'game-output');
+            this.updateTurnIndicator();
         } catch (error) {
             console.error('Error loading game:', error);
             this.showToast('Failed to load saved game.', 'error');
+        }
+    }
+
+    // Update turn indicator
+    updateTurnIndicator() {
+        if (!this.gameEngine || !this.gameEngine.state) {
+            this.turnIndicator.textContent = '';
+            return;
+        }
+        
+        const activePlayer = this.gameEngine.state.getActivePlayer();
+        if (!activePlayer) {
+            this.turnIndicator.textContent = '';
+            return;
+        }
+        
+        // Find the player object to get the name
+        const player = this.selectedPlayers.find(p => p.id === this.gameEngine.state.activePlayerId);
+        if (player) {
+            const currentLocation = this.gameEngine.state.getCurrentLocation();
+            const location = this.gameEngine.game.getLocation(currentLocation);
+            const locationName = location ? location.name : 'Unknown';
+            this.turnIndicator.textContent = `${player.name}'s turn (${locationName})`;
+        } else {
+            this.turnIndicator.textContent = "Player's turn";
         }
     }
 
@@ -289,6 +578,7 @@ class TextAdventureApp {
         this.menuScreen.classList.add('hidden');
         this.gameSelectScreen.classList.add('hidden');
         this.saveSelectScreen.classList.add('hidden');
+        this.playerSelectScreen.classList.add('hidden');
         this.gameScreen.classList.add('hidden');
     }
 
@@ -300,8 +590,13 @@ class TextAdventureApp {
             return;
         }
 
-        // Display user input
-        this.addOutput(`> ${input}`, 'user-input');
+        // Get current player for display
+        const activePlayerId = this.gameEngine.state.activePlayerId;
+        const activePlayer = this.selectedPlayers.find(p => p.id === activePlayerId);
+        const playerName = activePlayer ? activePlayer.name : 'Player';
+
+        // Display user input with player name
+        this.addOutput(`${playerName} > ${input}`, 'user-input');
         
         // Clear input field
         this.commandInput.value = '';
@@ -310,11 +605,39 @@ class TextAdventureApp {
         const response = this.gameEngine.parseCommand(input);
         this.addOutput(response, 'game-output');
 
+        // Advance to next player's turn (if multiple players)
+        if (this.selectedPlayers.length > 1) {
+            this.addOutput('', 'separator'); // Empty line for readability
+            this.advanceToNextPlayer();
+        }
+
         // Auto-save after each command
         await this.saveGame();
 
         // Scroll to bottom
         this.scrollToBottom();
+    }
+
+    // Advance to the next player's turn
+    advanceToNextPlayer() {
+        const currentIndex = this.selectedPlayers.findIndex(
+            p => p.id === this.gameEngine.state.activePlayerId
+        );
+        
+        if (currentIndex === -1) return;
+        
+        // Get next player (wrap around to first if at end)
+        const nextIndex = (currentIndex + 1) % this.selectedPlayers.length;
+        const nextPlayer = this.selectedPlayers[nextIndex];
+        
+        // Set the next player as active
+        this.gameEngine.state.setActivePlayer(nextPlayer.id);
+        
+        // Update the turn indicator
+        this.updateTurnIndicator();
+        
+        // Show the new player's current location
+        this.addOutput(this.gameEngine.getLocationDescription(), 'game-output');
     }
 
     // Save game state

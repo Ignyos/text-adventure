@@ -12,10 +12,10 @@ class Game {
         this.objective = data.objective || '';
         this.startLocation = data.startLocation;
         
-        // Initialize collections
-        this.locations = data.locations || [];
-        this.genericItems = data.genericItems || [];
-        this.uniqueItems = data.uniqueItems || [];
+        // Initialize collections with proper class instances
+        this.locations = (data.locations || []).map(loc => new Location(loc));
+        this.genericItems = (data.genericItems || []).map(item => new GenericItem(item));
+        this.uniqueItems = (data.uniqueItems || []).map(item => new UniqueItem(item));
         this.npcs = data.npcs || [];
         
         // Validate structure
