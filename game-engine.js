@@ -753,17 +753,34 @@ class GameEngine {
             
             // If key specified in command, check for it
             if (keyName && prep) {
-                const key = this.findUniqueItemInInventory(keyName);
-                if (!key) {
+                // Find all items in inventory that match the key name
+                const itemIds = this.state.getUniqueItemsInInventory();
+                const matchingKeys = [];
+                for (const id of itemIds) {
+                    const item = this.game.getUniqueItem(id);
+                    if (item && this.matchesName(item, keyName)) {
+                        matchingKeys.push(item);
+                    }
+                }
+                
+                if (matchingKeys.length === 0) {
                     return `You don't have ${keyName}.`;
                 }
                 
-                if (uniqueItem.requiredKey && key.id !== uniqueItem.requiredKey) {
-                    return `The ${key.name} doesn't fit the lock.`;
+                // If container requires a specific key, find it among the matching keys
+                if (uniqueItem.requiredKey) {
+                    const correctKey = matchingKeys.find(k => k.id === uniqueItem.requiredKey);
+                    if (correctKey) {
+                        this.state.unlockContainer(uniqueItem.id);
+                        return `You unlock the ${uniqueItem.name} with the ${correctKey.name}.`;
+                    }
+                    // Player has keys but none work
+                    return `None of your keys fit the lock.`;
                 }
                 
+                // No specific key required, use first matching key
                 this.state.unlockContainer(uniqueItem.id);
-                return `You unlock the ${uniqueItem.name} with the ${key.name}.`;
+                return `You unlock the ${uniqueItem.name} with the ${matchingKeys[0].name}.`;
             }
             
             // No key specified - check if player has required key
@@ -807,17 +824,34 @@ class GameEngine {
         
         // If key specified in command, check for it
         if (keyName && prep) {
-            const key = this.findUniqueItemInInventory(keyName);
-            if (!key) {
+            // Find all items in inventory that match the key name
+            const itemIds = this.state.getUniqueItemsInInventory();
+            const matchingKeys = [];
+            for (const id of itemIds) {
+                const item = this.game.getUniqueItem(id);
+                if (item && this.matchesName(item, keyName)) {
+                    matchingKeys.push(item);
+                }
+            }
+            
+            if (matchingKeys.length === 0) {
                 return `You don't have ${keyName}.`;
             }
             
-            if (exit.requiredItem && key.id !== exit.requiredItem) {
-                return `The ${key.name} doesn't fit the lock.`;
+            // If exit requires a specific item, find it among the matching keys
+            if (exit.requiredItem) {
+                const correctKey = matchingKeys.find(k => k.id === exit.requiredItem);
+                if (correctKey) {
+                    this.state.unlockExit(currentLocation, exit.direction);
+                    return `You unlock the way ${exit.direction} with the ${correctKey.name}.`;
+                }
+                // Player has keys but none work
+                return `None of your keys fit the lock.`;
             }
             
+            // No specific key required, use first matching key
             this.state.unlockExit(currentLocation, exit.direction);
-            return `You unlock the way ${exit.direction} with the ${key.name}.`;
+            return `You unlock the way ${exit.direction} with the ${matchingKeys[0].name}.`;
         }
         
         // No key specified - check if player has required item
@@ -856,17 +890,34 @@ class GameEngine {
             
             // If key specified in command, check for it
             if (keyName && prep) {
-                const key = this.findUniqueItemInInventory(keyName);
-                if (!key) {
+                // Find all items in inventory that match the key name
+                const itemIds = this.state.getUniqueItemsInInventory();
+                const matchingKeys = [];
+                for (const id of itemIds) {
+                    const item = this.game.getUniqueItem(id);
+                    if (item && this.matchesName(item, keyName)) {
+                        matchingKeys.push(item);
+                    }
+                }
+                
+                if (matchingKeys.length === 0) {
                     return `You don't have ${keyName}.`;
                 }
                 
-                if (uniqueItem.requiredKey && key.id !== uniqueItem.requiredKey) {
-                    return `The ${key.name} doesn't fit the lock.`;
+                // If container requires a specific key, find it among the matching keys
+                if (uniqueItem.requiredKey) {
+                    const correctKey = matchingKeys.find(k => k.id === uniqueItem.requiredKey);
+                    if (correctKey) {
+                        this.state.lockContainer(uniqueItem.id);
+                        return `You lock the ${uniqueItem.name} with the ${correctKey.name}.`;
+                    }
+                    // Player has keys but none work
+                    return `None of your keys fit the lock.`;
                 }
                 
+                // No specific key required, use first matching key
                 this.state.lockContainer(uniqueItem.id);
-                return `You lock the ${uniqueItem.name} with the ${key.name}.`;
+                return `You lock the ${uniqueItem.name} with the ${matchingKeys[0].name}.`;
             }
             
             // No key specified - check if player has required key
@@ -910,17 +961,34 @@ class GameEngine {
         
         // If key specified in command, check for it
         if (keyName && prep) {
-            const key = this.findUniqueItemInInventory(keyName);
-            if (!key) {
+            // Find all items in inventory that match the key name
+            const itemIds = this.state.getUniqueItemsInInventory();
+            const matchingKeys = [];
+            for (const id of itemIds) {
+                const item = this.game.getUniqueItem(id);
+                if (item && this.matchesName(item, keyName)) {
+                    matchingKeys.push(item);
+                }
+            }
+            
+            if (matchingKeys.length === 0) {
                 return `You don't have ${keyName}.`;
             }
             
-            if (exit.requiredItem && key.id !== exit.requiredItem) {
-                return `The ${key.name} doesn't fit the lock.`;
+            // If exit requires a specific item, find it among the matching keys
+            if (exit.requiredItem) {
+                const correctKey = matchingKeys.find(k => k.id === exit.requiredItem);
+                if (correctKey) {
+                    this.state.lockExit(currentLocation, exit.direction);
+                    return `You lock the way ${exit.direction} with the ${correctKey.name}.`;
+                }
+                // Player has keys but none work
+                return `None of your keys fit the lock.`;
             }
             
+            // No specific key required, use first matching key
             this.state.lockExit(currentLocation, exit.direction);
-            return `You lock the way ${exit.direction} with the ${key.name}.`;
+            return `You lock the way ${exit.direction} with the ${matchingKeys[0].name}.`;
         }
         
         // No key specified - check if player has required item
