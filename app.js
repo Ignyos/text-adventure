@@ -223,6 +223,8 @@ class TextAdventureApp {
         // Clear command input
         if (this.commandInput) {
             this.commandInput.value = '';
+            this.commandInput.disabled = false;
+            this.commandInput.placeholder = 'Enter command...';
         }
     }
 
@@ -841,6 +843,10 @@ class TextAdventureApp {
     showGameScreen() {
         this.hideAllScreens();
         this.gameScreen.classList.remove('hidden');
+        
+        // Ensure command input is enabled
+        this.commandInput.disabled = false;
+        this.commandInput.placeholder = 'Enter command...';
         this.commandInput.focus();
     }
 
