@@ -282,17 +282,41 @@ class TextAdventureApp {
 
             saves.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-            saves.forEach(save => {
+            for (const save of saves) {
                 const item = document.createElement('div');
                 item.className = 'selection-item';
                 const date = new Date(save.timestamp).toLocaleString();
+                
+                // Get player names for this save
+                let playerNames = [];
+                if (save.gameState && save.gameState.players) {
+                    const playerIds = Object.keys(save.gameState.players);
+                    for (const playerId of playerIds) {
+                        try {
+                            // Check if legacy player
+                            if (playerId.startsWith('legacy-player-')) {
+                                playerNames.push('Player');
+                            } else {
+                                const player = await this.storage.getPlayer(playerId);
+                                if (player) {
+                                    playerNames.push(player.name);
+                                }
+                            }
+                        } catch (error) {
+                            console.error(`Failed to load player ${playerId}:`, error);
+                        }
+                    }
+                }
+                
+                const playersText = playerNames.length > 0 ? ` | Players: ${playerNames.join(', ')}` : '';
+                
                 item.innerHTML = `
                     <div class="selection-item-title">${save.gameTitle}</div>
-                    <div class="selection-item-info">Saved: ${date}</div>
+                    <div class="selection-item-info">Saved: ${date}${playersText}</div>
                 `;
                 item.addEventListener('click', () => this.loadGame(save));
                 this.saveList.appendChild(item);
-            });
+            }
         } catch (error) {
             console.error('Error loading saves:', error);
             this.saveList.innerHTML = '<div class="no-items-message">Error loading saved games.</div>';
@@ -819,6 +843,21 @@ class TextAdventureApp {
         // Process command
         const result = this.gameEngine.parseCommand(input);
         this.addOutput(result.response, 'game-output');
+        
+        // Check quest progress after command
+        const questUpdate = this.gameEngine.checkQuestProgress();
+        if (questUpdate) {
+            this.addOutput(questUpdate, 'quest-update');
+            
+            // Check if main quest is complete
+            const mainQuest = this.gameEngine.game.getMainQuest();
+            if (mainQuest && this.gameEngine.state.isQuestCompleted(mainQuest.id)) {
+                // Game is complete - disable input
+                this.commandInput.disabled = true;
+                this.commandInput.placeholder = 'Game Complete! Return to menu to start a new game.';
+                return; // Don't advance turn or auto-save
+            }
+        }
 
         // Advance to next player's turn (if multiple players and command consumes turn)
         if (this.selectedPlayers.length > 1 && result.consumesTurn) {

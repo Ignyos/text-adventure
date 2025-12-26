@@ -45,6 +45,7 @@ class GameState {
             this.genericItemStacks = existingState.genericItemStacks || {};
             this.npcLocations = existingState.npcLocations || {};
             this.containerStates = existingState.containerStates || {};
+            this.exitStates = existingState.exitStates || {};
             this.flags = existingState.flags || {}; // Global game flags
             this.questStates = existingState.questStates || {};
         } else {
@@ -60,6 +61,7 @@ class GameState {
             this.genericItemStacks = {};
             this.npcLocations = {};
             this.containerStates = {};
+            this.exitStates = {};
             this.flags = {};
             this.questStates = {};
             
@@ -90,6 +92,28 @@ class GameState {
                 game.npcs.forEach(npc => {
                     if (npc.location) {
                         this.npcLocations[npc.id] = npc.location;
+                    }
+                });
+            }
+            
+            // Initialize quest states from game definition
+            if (game.quests) {
+                game.quests.forEach(quest => {
+                    this.questStates[quest.id] = quest.initialState || 'inactive';
+                });
+            }
+            
+            // Initialize exit states from game definition
+            if (game.locations) {
+                game.locations.forEach(location => {
+                    if (location.exits) {
+                        location.exits.forEach(exit => {
+                            const exitKey = `${location.id}-${exit.direction}`;
+                            // Exits with requiredItem should start locked
+                            this.exitStates[exitKey] = {
+                                isLocked: exit.locked || (exit.requiredItem ? true : false)
+                            };
+                        });
                     }
                 });
             }
@@ -326,6 +350,41 @@ class GameState {
         this.containerStates[containerId].isOpen = false;
     }
     
+    lockContainer(containerId) {
+        if (!this.containerStates[containerId]) {
+            this.containerStates[containerId] = { isLocked: true, isOpen: false };
+        }
+        this.containerStates[containerId].isLocked = true;
+    }
+    
+    // ===== Exit State Management =====
+    
+    getExitState(locationId, direction) {
+        const exitKey = `${locationId}-${direction}`;
+        return this.exitStates[exitKey] || { isLocked: false };
+    }
+    
+    isExitLocked(locationId, direction) {
+        const state = this.getExitState(locationId, direction);
+        return state.isLocked;
+    }
+    
+    unlockExit(locationId, direction) {
+        const exitKey = `${locationId}-${direction}`;
+        if (!this.exitStates[exitKey]) {
+            this.exitStates[exitKey] = { isLocked: false };
+        }
+        this.exitStates[exitKey].isLocked = false;
+    }
+    
+    lockExit(locationId, direction) {
+        const exitKey = `${locationId}-${direction}`;
+        if (!this.exitStates[exitKey]) {
+            this.exitStates[exitKey] = { isLocked: true };
+        }
+        this.exitStates[exitKey].isLocked = true;
+    }
+    
     // ===== NPC Management =====
     
     getNPCLocation(npcId) {
@@ -445,6 +504,7 @@ class GameState {
             genericItemStacks: this.genericItemStacks,
             npcLocations: this.npcLocations,
             containerStates: this.containerStates,
+            exitStates: this.exitStates,
             flags: this.flags,
             questStates: this.questStates,
             timestamp: new Date().toISOString()

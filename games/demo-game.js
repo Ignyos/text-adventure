@@ -6,7 +6,7 @@ function getDemoGame() {
     builder.id = 'demo-game';
     builder.setTitle('The Mysterious Cave');
     builder.setAuthor('Ignyos');
-    builder.setVersion('1.1');
+    builder.setVersion('1.2');
     builder.setDescription('Explore a mysterious cave system and find the hidden treasure');
     builder.setObjective('You find yourself at the entrance of a mysterious cave. Your objective is to explore and find the hidden treasure.');
     
@@ -24,7 +24,7 @@ function getDemoGame() {
     builder.addLocation({
         id: 'main-chamber',
         name: 'Main Chamber',
-        description: 'You are in a large chamber with high ceilings. Stalactites hang from above, and the sound of dripping water echoes throughout. There are passages to the north and east, and the entrance is to the south.',
+        description: 'You are in a large chamber with high ceilings. Stalactites hang from above, and the sound of dripping water echoes throughout. There are passages to the north and east, and the entrance is to the south. Something glints on the ground near the center of the chamber.',
         exits: [
             { direction: 'north', leadsTo: 'treasure-room' },
             { direction: 'east', leadsTo: 'dark-tunnel' },
@@ -73,9 +73,19 @@ function getDemoGame() {
     builder.addLocation({
         id: 'forest-clearing',
         name: 'Forest Clearing',
-        description: "You've reached a peaceful forest clearing. Sunlight streams through the canopy above, and birds chirp in the trees. A path leads north back through the forest.",
+        description: "You've reached a peaceful forest clearing. Sunlight streams through the canopy above, and birds chirp in the trees. A path leads north back through the forest. To the west, you notice an old wooden shed.",
         exits: [
-            { direction: 'north', leadsTo: 'forest-path' }
+            { direction: 'north', leadsTo: 'forest-path' },
+            { direction: 'west', leadsTo: 'old-shed', requiredItem: 'rusty-key' }
+        ]
+    });
+    
+    builder.addLocation({
+        id: 'old-shed',
+        name: 'Old Shed',
+        description: 'You are inside a weathered wooden shed. Dust covers everything, and cobwebs hang in the corners. A small amount of light filters through gaps in the wooden walls. The door leads back east to the clearing.',
+        exits: [
+            { direction: 'east', leadsTo: 'forest-clearing' }
         ]
     });
     
@@ -98,10 +108,21 @@ function getDemoGame() {
     
     // Add unique items
     builder.addUniqueItem({
+        id: 'rusty-key',
+        name: 'Rusty Key',
+        description: 'A small rusty key.',
+        location: 'main-chamber',
+        takeable: true,
+        visible: true,
+        examineText: 'The key is heavily rusted but still functional. It looks like it might fit a simple lock.',
+        takeText: 'You pick up the rusty key.'
+    });
+    
+    builder.addUniqueItem({
         id: 'iron-key',
         name: 'Iron Key',
         description: 'A heavy iron key with rust spots.',
-        location: 'forest-clearing',
+        location: 'old-shed',
         takeable: true,
         visible: true,
         examineText: 'The key is old but sturdy. It looks like it might fit a large lock.',
@@ -145,6 +166,46 @@ function getDemoGame() {
     
     // Set start location
     builder.setStartLocation('cave-entrance');
+    
+    // Add Side Quest - Explore the Shed
+    builder.addQuest({
+        id: 'explore-shed',
+        name: 'Explore the Old Shed',
+        description: 'There appears to be an old shed in the forest clearing. Find a way to unlock it and see what\'s inside.',
+        isMainQuest: false,
+        initialState: 'inactive',
+        objectives: [
+            {
+                id: 'enter-shed',
+                description: 'Enter the old shed',
+                required: true
+            }
+        ],
+        requireAllObjectives: true,
+        scoreReward: 25,
+        completionMessage: 'Quest complete! You\'ve explored the old shed and discovered what was hidden inside.',
+        startMessage: 'New quest: Explore the Old Shed!\nUse QUEST or QUESTS to check your progress.'
+    });
+    
+    // Add Main Quest - Find the Treasure
+    builder.addQuest({
+        id: 'find-treasure',
+        name: 'Find the Lost Treasure',
+        description: 'Legend speaks of a great treasure hidden deep within these caves. Find the treasure chest and claim your reward!',
+        isMainQuest: true,
+        initialState: 'active',
+        objectives: [
+            {
+                id: 'collect-treasure',
+                description: 'Take the gold and gems from the treasure chest',
+                required: true
+            }
+        ],
+        requireAllObjectives: true,
+        scoreReward: 100,
+        completionMessage: '\n=== QUEST COMPLETE ===\nCongratulations! You have found the lost treasure and completed your quest!\n\nThank you for playing!',
+        startMessage: 'Your quest begins: Find the Lost Treasure!\nUse QUEST or QUESTS to check your progress.'
+    });
     
     // Build and return the immutable Game
     return builder.toGame();

@@ -17,6 +17,7 @@ class Game {
         this.genericItems = (data.genericItems || []).map(item => new GenericItem(item));
         this.uniqueItems = (data.uniqueItems || []).map(item => new UniqueItem(item));
         this.npcs = data.npcs || [];
+        this.quests = (data.quests || []).map(quest => new Quest(quest));
         
         // Validate structure
         this.validate();
@@ -83,6 +84,22 @@ class Game {
             throw new Error('Game npcs must be an array');
         }
         
+        // Validate quests array
+        if (!Array.isArray(this.quests)) {
+            throw new Error('Game quests must be an array');
+        }
+        
+        // Validate main quest exists if any quests defined
+        if (this.quests.length > 0) {
+            const mainQuests = this.quests.filter(q => q.isMainQuest);
+            if (mainQuests.length === 0) {
+                throw new Error('Game must have at least one main quest');
+            }
+            if (mainQuests.length > 1) {
+                throw new Error('Game can only have one main quest');
+            }
+        }
+        
         // Validate exit references
         this.validateExits();
     }
@@ -114,6 +131,7 @@ class Game {
         this.genericItemMap = new Map();
         this.uniqueItemMap = new Map();
         this.npcMap = new Map();
+        this.questMap = new Map();
         
         this.locations.forEach(location => {
             this.locationMap.set(location.id, location);
@@ -129,6 +147,10 @@ class Game {
         
         this.npcs.forEach(npc => {
             this.npcMap.set(npc.id, npc);
+        });
+        
+        this.quests.forEach(quest => {
+            this.questMap.set(quest.id, quest);
         });
     }
     
@@ -152,6 +174,16 @@ class Game {
         return this.npcMap.get(npcId);
     }
     
+    // Get a quest by ID
+    getQuest(questId) {
+        return this.questMap.get(questId);
+    }
+    
+    // Get the main quest
+    getMainQuest() {
+        return this.quests.find(q => q.isMainQuest) || null;
+    }
+    
     // Get all locations
     getLocations() {
         return this.locations;
@@ -172,6 +204,11 @@ class Game {
         return this.npcs;
     }
     
+    // Get all quests
+    getQuests() {
+        return this.quests;
+    }
+    
     // Serialize to plain object for storage
     toJSON() {
         return {
@@ -185,7 +222,8 @@ class Game {
             locations: this.locations,
             genericItems: this.genericItems,
             uniqueItems: this.uniqueItems,
-            npcs: this.npcs
+            npcs: this.npcs,
+            quests: this.quests
         };
     }
     

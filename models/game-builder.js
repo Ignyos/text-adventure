@@ -14,6 +14,7 @@ class GameBuilder {
             this.genericItems = [...existingGame.genericItems];
             this.uniqueItems = [...existingGame.uniqueItems];
             this.npcs = [...existingGame.npcs];
+            this.quests = [...existingGame.quests];
         } else {
             // New game
             this.id = this.generateId();
@@ -27,6 +28,7 @@ class GameBuilder {
             this.genericItems = [];
             this.uniqueItems = [];
             this.npcs = [];
+            this.quests = [];
         }
     }
     
@@ -246,6 +248,51 @@ class GameBuilder {
         return { success: true };
     }
     
+    // Quest management
+    addQuest(quest) {
+        if (!quest.id) {
+            return { success: false, error: 'Quest must have an id' };
+        }
+        if (!quest.name) {
+            return { success: false, error: 'Quest must have a name' };
+        }
+        
+        // Check for duplicate ID
+        if (this.quests.some(q => q.id === quest.id)) {
+            return { success: false, error: `Quest with id '${quest.id}' already exists` };
+        }
+        
+        this.quests.push(quest);
+        return { success: true };
+    }
+    
+    updateQuest(questId, changes) {
+        const index = this.quests.findIndex(quest => quest.id === questId);
+        if (index === -1) {
+            return { success: false, error: 'Quest not found' };
+        }
+        
+        this.quests[index] = {
+            ...this.quests[index],
+            ...changes
+        };
+        
+        return { success: true };
+    }
+    
+    removeQuest(questId) {
+        const index = this.quests.findIndex(quest => quest.id === questId);
+        if (index === -1) {
+            return { success: false, error: 'Quest not found' };
+        }
+        this.quests.splice(index, 1);
+        return { success: true };
+    }
+    
+    getQuest(questId) {
+        return this.quests.find(quest => quest.id === questId);
+    }
+    
     // Validation - returns array of issues instead of throwing
     validate() {
         const issues = [];
@@ -309,7 +356,8 @@ class GameBuilder {
             locations: this.locations,
             genericItems: this.genericItems,
             uniqueItems: this.uniqueItems,
-            npcs: this.npcs
+            npcs: this.npcs,
+            quests: this.quests
         };
     }
     
@@ -327,6 +375,7 @@ class GameBuilder {
         builder.genericItems = data.genericItems || [];
         builder.uniqueItems = data.uniqueItems || [];
         builder.npcs = data.npcs || [];
+        builder.quests = data.quests || [];
         return builder;
     }
     

@@ -21,9 +21,12 @@ class GameEngine {
             'EXAMINE': ['examine', 'ex', 'x', 'inspect', 'look at', 'check'],
             'OPEN': ['open', 'look inside', 'look in'],
             'UNLOCK': ['unlock'],
+            'LOCK': ['lock'],
             'CLOSE': ['close', 'shut'],
             'USE': ['use', 'employ', 'activate'],
-            'PUT': ['put', 'place', 'insert']
+            'PUT': ['put', 'place', 'insert'],
+            'QUEST': ['quest', 'q', 'mission'],
+            'QUESTS': ['quests', 'missions', 'objectives']
         };
         
         // Prepositions for complex commands
@@ -68,6 +71,12 @@ class GameEngine {
         
         if (this.game.objective) {
             output.push(this.game.objective);
+        }
+        
+        // Show only the main quest start message
+        const mainQuest = this.game.getMainQuest();
+        if (mainQuest && this.state.getQuestState(mainQuest.id) === 'active' && mainQuest.startMessage) {
+            output.push(mainQuest.startMessage);
         }
         
         output.push(this.getLocationDescription());
@@ -123,6 +132,12 @@ class GameEngine {
             output.push(`\nObvious exits: ${exitDirs}`);
         }
         
+        // Check for quest discovery triggers
+        const questDiscoveryMessage = this.checkQuestDiscovery(currentLocation);
+        if (questDiscoveryMessage) {
+            output.push('\n' + questDiscoveryMessage);
+        }
+        
         return output.join('\n');
     }
 
@@ -148,6 +163,14 @@ class GameEngine {
         
         if (result.error) {
             return { response: result.error, consumesTurn: false };
+        }
+        
+        // For QUEST commands, use the original input to preserve articles in quest names
+        if (result.verb === 'QUEST' || result.verb === 'QUESTS') {
+            const questMatch = command.match(/^(?:quest|quests)\s+(.+)$/i);
+            if (questMatch) {
+                result.directObject = questMatch[1].trim();
+            }
         }
         
         // Execute the matched command
@@ -299,7 +322,7 @@ class GameEngine {
         const { verb, quantity, directObject, indirectObject, preposition } = parsed;
         
         // Commands that don't consume a turn (informational commands)
-        const nonTurnCommands = ['LOOK', 'INVENTORY', 'EXAMINE', 'TAKE', 'DROP', 'OPEN', 'UNLOCK', 'CLOSE', 'USE', 'PUT'];
+        const nonTurnCommands = ['LOOK', 'INVENTORY', 'EXAMINE', 'QUEST', 'QUESTS'];
         const consumesTurn = !nonTurnCommands.includes(verb);
         
         let response;
@@ -333,6 +356,9 @@ class GameEngine {
             case 'UNLOCK':
                 response = this.cmdUnlock(directObject, indirectObject, preposition);
                 break;
+            case 'LOCK':
+                response = this.cmdLock(directObject, indirectObject, preposition);
+                break;
             case 'CLOSE':
                 response = this.cmdClose(directObject);
                 break;
@@ -341,6 +367,10 @@ class GameEngine {
                 break;
             case 'PUT':
                 response = this.cmdPut(directObject, indirectObject, preposition);
+                break;
+            case 'QUEST':
+            case 'QUESTS':
+                response = this.cmdQuest(directObject);
                 break;
             default:
                 response = `I don't know how to ${verb.toLowerCase()}.`;
@@ -388,13 +418,30 @@ class GameEngine {
             return `You can't go ${direction} from here.`;
         }
         
-        // Check if exit is locked
-        if (exit.locked) {
+        // Check if exit is locked (use dynamic state, not static definition)
+        if (this.state.isExitLocked(currentLocation, exit.direction)) {
+            // Check if player has required item to unlock
+            if (exit.requiredItem) {
+                if (this.state.isUniqueItemInInventory(exit.requiredItem)) {
+                    // Automatically unlock with required item
+                    const item = this.game.getUniqueItem(exit.requiredItem);
+                    this.state.unlockExit(currentLocation, exit.direction);
+                    
+                    return `You use the ${item.name} to unlock the way ${exit.direction}.\n\n` + 
+                           this.cmdGo(direction); // Recursively try movement again
+                }
+            }
             return exit.lockedMessage || "That way is locked.";
         }
         
         // Move player
         this.state.movePlayer(exit.leadsTo);
+        
+        // Track quest objectives for entering specific locations
+        if (exit.leadsTo === 'old-shed') {
+            this.state.setFlag('quest-explore-shed-objective-enter-shed', true);
+        }
+        
         return this.getLocationDescription();
     }
     
@@ -417,6 +464,7 @@ class GameEngine {
             }
             
             this.state.moveUniqueItem(uniqueItem.id, 'inventory');
+            
             return uniqueItem.getTakeMessage();
         }
         
@@ -492,6 +540,11 @@ class GameEngine {
         }
         
         if (this.state.transferGenericItems(container.id, 'inventory', item.id, actualQty)) {
+            // Track quest objective for collecting treasure from chest
+            if (container.id === 'treasure-chest' && (item.id === 'gold-coin' || item.id === 'gem')) {
+                this.state.setFlag('quest-find-treasure-objective-collect-treasure', true);
+            }
+            
             return `You take ${item.getDescription(actualQty)} from the ${container.name}.`;
         }
         
@@ -671,18 +724,66 @@ class GameEngine {
             return "Unlock what?";
         }
         
+        // Try to unlock a container first
         const uniqueItem = this.findUniqueItemAtLocation(objectName);
-        if (!uniqueItem) {
+        if (uniqueItem && uniqueItem.isContainer) {
+            // Check if already unlocked
+            if (!this.state.isContainerLocked(uniqueItem.id)) {
+                return `The ${uniqueItem.name} is already unlocked.`;
+            }
+            
+            // If key specified in command, check for it
+            if (keyName && prep) {
+                const key = this.findUniqueItemInInventory(keyName);
+                if (!key) {
+                    return `You don't have ${keyName}.`;
+                }
+                
+                if (uniqueItem.requiredKey && key.id !== uniqueItem.requiredKey) {
+                    return `The ${key.name} doesn't fit the lock.`;
+                }
+                
+                this.state.unlockContainer(uniqueItem.id);
+                return `You unlock the ${uniqueItem.name} with the ${key.name}.`;
+            }
+            
+            // No key specified - check if player has required key
+            if (uniqueItem.requiredKey) {
+                const key = this.game.getUniqueItem(uniqueItem.requiredKey);
+                if (key && this.state.isUniqueItemInInventory(key.id)) {
+                    this.state.unlockContainer(uniqueItem.id);
+                    return `You unlock the ${uniqueItem.name} with the ${key.name}.`;
+                }
+                return `You need a key to unlock the ${uniqueItem.name}.`;
+            }
+            
+            // No key required
+            this.state.unlockContainer(uniqueItem.id);
+            return `You unlock the ${uniqueItem.name}.`;
+        }
+        
+        // Try to unlock an exit/door/direction
+        const currentLocation = this.state.getCurrentLocation();
+        const location = this.game.getLocation(currentLocation);
+        
+        if (!location || !location.exits) {
             return "I don't see that here.";
         }
         
-        if (!uniqueItem.isContainer) {
-            return `You can't unlock the ${uniqueItem.name}.`;
+        // Find matching exit by direction or name
+        const exit = location.exits.find(e => 
+            e.direction.toLowerCase() === objectName.toLowerCase() ||
+            e.direction.toLowerCase().startsWith(objectName.toLowerCase()) ||
+            objectName.toLowerCase().includes(e.direction.toLowerCase())
+        );
+        
+        if (!exit) {
+            return "I don't see that here.";
         }
         
         // Check if already unlocked
-        if (!this.state.isContainerLocked(uniqueItem.id)) {
-            return `The ${uniqueItem.name} is already unlocked.`;
+        if (!this.state.isExitLocked(currentLocation, exit.direction)) {
+            return `The way ${exit.direction} is already unlocked.`;
         }
         
         // If key specified in command, check for it
@@ -692,27 +793,130 @@ class GameEngine {
                 return `You don't have ${keyName}.`;
             }
             
-            if (uniqueItem.requiredKey && key.id !== uniqueItem.requiredKey) {
+            if (exit.requiredItem && key.id !== exit.requiredItem) {
                 return `The ${key.name} doesn't fit the lock.`;
             }
             
-            this.state.unlockContainer(uniqueItem.id);
-            return `You unlock the ${uniqueItem.name} with the ${key.name}.`;
+            this.state.unlockExit(currentLocation, exit.direction);
+            return `You unlock the way ${exit.direction} with the ${key.name}.`;
         }
         
-        // No key specified - check if player has required key
-        if (uniqueItem.requiredKey) {
-            const key = this.game.getUniqueItem(uniqueItem.requiredKey);
-            if (key && this.state.isUniqueItemInInventory(key.id)) {
-                this.state.unlockContainer(uniqueItem.id);
-                return `You unlock the ${uniqueItem.name} with the ${key.name}.`;
+        // No key specified - check if player has required item
+        if (exit.requiredItem) {
+            const item = this.game.getUniqueItem(exit.requiredItem);
+            if (item && this.state.isUniqueItemInInventory(item.id)) {
+                this.state.unlockExit(currentLocation, exit.direction);
+                return `You unlock the way ${exit.direction} with the ${item.name}.`;
             }
-            return `You need a key to unlock the ${uniqueItem.name}.`;
+            return `You need something to unlock the way ${exit.direction}.`;
         }
         
-        // No key required
-        this.state.unlockContainer(uniqueItem.id);
-        return `You unlock the ${uniqueItem.name}.`;
+        // No item required
+        this.state.unlockExit(currentLocation, exit.direction);
+        return `You unlock the way ${exit.direction}.`;
+    }
+    
+    // LOCK command
+    cmdLock(objectName, keyName, prep) {
+        if (!objectName) {
+            return "Lock what?";
+        }
+        
+        // Try to lock a container first
+        const uniqueItem = this.findUniqueItemAtLocation(objectName);
+        if (uniqueItem && uniqueItem.isContainer) {
+            // Check if already locked
+            if (this.state.isContainerLocked(uniqueItem.id)) {
+                return `The ${uniqueItem.name} is already locked.`;
+            }
+            
+            // Container must be closed to lock it
+            if (this.state.isContainerOpen(uniqueItem.id)) {
+                return `You need to close the ${uniqueItem.name} before you can lock it.`;
+            }
+            
+            // If key specified in command, check for it
+            if (keyName && prep) {
+                const key = this.findUniqueItemInInventory(keyName);
+                if (!key) {
+                    return `You don't have ${keyName}.`;
+                }
+                
+                if (uniqueItem.requiredKey && key.id !== uniqueItem.requiredKey) {
+                    return `The ${key.name} doesn't fit the lock.`;
+                }
+                
+                this.state.lockContainer(uniqueItem.id);
+                return `You lock the ${uniqueItem.name} with the ${key.name}.`;
+            }
+            
+            // No key specified - check if player has required key
+            if (uniqueItem.requiredKey) {
+                const key = this.game.getUniqueItem(uniqueItem.requiredKey);
+                if (key && this.state.isUniqueItemInInventory(key.id)) {
+                    this.state.lockContainer(uniqueItem.id);
+                    return `You lock the ${uniqueItem.name} with the ${key.name}.`;
+                }
+                return `You need a key to lock the ${uniqueItem.name}.`;
+            }
+            
+            // No key required
+            this.state.lockContainer(uniqueItem.id);
+            return `You lock the ${uniqueItem.name}.`;
+        }
+        
+        // Try to lock an exit/door/direction
+        const currentLocation = this.state.getCurrentLocation();
+        const location = this.game.getLocation(currentLocation);
+        
+        if (!location || !location.exits) {
+            return "I don't see that here.";
+        }
+        
+        // Find matching exit by direction or name
+        const exit = location.exits.find(e => 
+            e.direction.toLowerCase() === objectName.toLowerCase() ||
+            e.direction.toLowerCase().startsWith(objectName.toLowerCase()) ||
+            objectName.toLowerCase().includes(e.direction.toLowerCase())
+        );
+        
+        if (!exit) {
+            return "I don't see that here.";
+        }
+        
+        // Check if already locked
+        if (this.state.isExitLocked(currentLocation, exit.direction)) {
+            return `The way ${exit.direction} is already locked.`;
+        }
+        
+        // If key specified in command, check for it
+        if (keyName && prep) {
+            const key = this.findUniqueItemInInventory(keyName);
+            if (!key) {
+                return `You don't have ${keyName}.`;
+            }
+            
+            if (exit.requiredItem && key.id !== exit.requiredItem) {
+                return `The ${key.name} doesn't fit the lock.`;
+            }
+            
+            this.state.lockExit(currentLocation, exit.direction);
+            return `You lock the way ${exit.direction} with the ${key.name}.`;
+        }
+        
+        // No key specified - check if player has required item
+        if (exit.requiredItem) {
+            const item = this.game.getUniqueItem(exit.requiredItem);
+            if (item && this.state.isUniqueItemInInventory(item.id)) {
+                this.state.lockExit(currentLocation, exit.direction);
+                return `You lock the way ${exit.direction} with the ${item.name}.`;
+            }
+            return `You need something to lock the way ${exit.direction}.`;
+        }
+        
+        // No item required
+        this.state.lockExit(currentLocation, exit.direction);
+        return `You lock the way ${exit.direction}.`;
     }
     
     // CLOSE command
@@ -852,5 +1056,157 @@ class GameEngine {
         
         // Check if all search words appear in item name
         return searchWords.every(sw => itemWords.some(iw => iw.startsWith(sw)));
+    }
+    
+    // QUEST command - List or view quests
+    cmdQuest(questName) {
+        const quests = this.game.getQuests();
+        
+        if (!quests || quests.length === 0) {
+            return "There are no quests in this game.";
+        }
+        
+        // If no quest specified, list all quests
+        if (!questName) {
+            let output = ["=== QUESTS ==="];
+            let discoveredQuests = [];
+            
+            quests.forEach(quest => {
+                const state = this.state.getQuestState(quest.id);
+                
+                // Skip inactive quests - they haven't been discovered yet
+                if (state === 'inactive') {
+                    return;
+                }
+                
+                let statusIcon = '';
+                
+                switch (state) {
+                    case 'active':
+                        statusIcon = '[ACTIVE]';
+                        break;
+                    case 'completed':
+                        statusIcon = '[COMPLETE]';
+                        break;
+                    case 'failed':
+                        statusIcon = '[FAILED]';
+                        break;
+                }
+                
+                const questType = quest.isMainQuest ? ' (MAIN QUEST)' : '';
+                discoveredQuests.push(`${statusIcon} ${quest.name}${questType}`);
+                
+                if (state === 'active' && quest.objectives.length > 0) {
+                    quest.objectives.forEach(obj => {
+                        const completed = this.state.getFlag(`quest-${quest.id}-objective-${obj.id}`);
+                        const checkmark = completed ? '[✓]' : '[ ]';
+                        discoveredQuests.push(`    ${checkmark} ${obj.description}`);
+                    });
+                }
+            });
+            
+            if (discoveredQuests.length === 0) {
+                return "You haven't discovered any quests yet.";
+            }
+            
+            output.push(...discoveredQuests);
+            
+            output.push("\nUse QUEST <name> to view details of a specific quest.");
+            return output.join('\n');
+        }
+        
+        // Find specific quest
+        const quest = quests.find(q => 
+            q.name.toLowerCase().includes(questName.toLowerCase()) ||
+            q.id.toLowerCase() === questName.toLowerCase()
+        );
+        
+        if (!quest) {
+            return `Quest '${questName}' not found. Use QUESTS to see all quests.`;
+        }
+        
+        // Display quest details
+        const state = this.state.getQuestState(quest.id);
+        let output = [`=== ${quest.name.toUpperCase()} ===`];
+        
+        if (quest.isMainQuest) {
+            output.push("[MAIN QUEST]");
+        }
+        
+        output.push(`\nStatus: ${state.toUpperCase()}`);
+        output.push(`\n${quest.description}`);
+        
+        if (quest.objectives.length > 0 && state === 'active') {
+            output.push("\nObjectives:");
+            quest.objectives.forEach(obj => {
+                const completed = this.state.getFlag(`quest-${quest.id}-objective-${obj.id}`);
+                const checkmark = completed ? '[✓]' : '[ ]';
+                output.push(`  ${checkmark} ${obj.description}`);
+            });
+        }
+        
+        if (state === 'completed' && quest.scoreReward > 0) {
+            output.push(`\nReward: ${quest.scoreReward} points`);
+        }
+        
+        return output.join('\n');
+    }
+    
+    // Check and update quest progress
+    checkQuestProgress() {
+        const quests = this.game.getQuests();
+        if (!quests) return null;
+        
+        let questMessages = [];
+        
+        quests.forEach(quest => {
+            const state = this.state.getQuestState(quest.id);
+            
+            // Only check active quests
+            if (state !== 'active') return;
+            
+            // Check if quest is complete
+            if (quest.isComplete(this.state)) {
+                // Complete the quest
+                this.state.setQuestState(quest.id, 'completed');
+                
+                // Add score reward
+                if (quest.scoreReward > 0) {
+                    this.state.addScore(quest.scoreReward);
+                }
+                
+                // Add item rewards
+                if (quest.itemRewards && quest.itemRewards.length > 0) {
+                    quest.itemRewards.forEach(itemId => {
+                        const inventoryKey = `inventory-${this.state.activePlayerId}`;
+                        this.state.uniqueItemLocations[itemId] = inventoryKey;
+                    });
+                }
+                
+                questMessages.push(quest.getCompletionMessage());
+                
+                // Check if this is the main quest
+                if (quest.isMainQuest) {
+                    questMessages.push("\n=== GAME COMPLETE ===\nYou have completed the main quest!");
+                }
+            }
+        });
+        
+        return questMessages.length > 0 ? questMessages.join('\n\n') : null;
+    }
+    
+    // Check for quest discovery triggers based on location
+    checkQuestDiscovery(locationId) {
+        // Discover "Explore the Old Shed" quest when player reaches forest-clearing
+        if (locationId === 'forest-clearing') {
+            const shedQuest = this.game.getQuests()?.find(q => q.id === 'explore-shed');
+            if (shedQuest && this.state.getQuestState('explore-shed') === 'inactive') {
+                this.state.setQuestState('explore-shed', 'active');
+                // The quest start message will be displayed after the location description
+                // We'll return it so it can be appended to output
+                return shedQuest.startMessage;
+            }
+        }
+        return null;
     }
 }

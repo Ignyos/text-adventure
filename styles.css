@@ -88,7 +88,6 @@ body {
     margin-bottom: 30px;
     max-height: 400px;
     overflow-y: auto;
-    border: 1px solid #0f0;
     padding: 10px;
 }
 
@@ -687,6 +686,7 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 2000;
+    -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
 }
 
@@ -818,4 +818,22 @@ body {
 .menu-item.disabled:hover {
     background-color: transparent;
     color: #0f0;
+}
+
+/* Quest Update Styling */
+.quest-update {
+    color: #0ff;
+    background-color: #002200;
+    border: 2px solid #0ff;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-weight: bold;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    animation: questGlow 1s ease-in-out;
+}
+
+@keyframes questGlow {
+    0%, 100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.3); }
+    50% { box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); }
 }

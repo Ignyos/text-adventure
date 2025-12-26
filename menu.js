@@ -143,17 +143,20 @@ class Menu {
     const helpContent = `
       <div class="help-section">
         <h3>COMMANDS:</h3>
-        <div class="help-command"><span class="help-cmd">LOOK</span> - Look around or examine something</div>
-        <div class="help-command"><span class="help-cmd">GO [direction]</span> - Move in a direction (or use N, S, E, W shortcuts)</div>
-        <div class="help-command"><span class="help-cmd">TAKE [item]</span> - Pick up an item</div>
-        <div class="help-command"><span class="help-cmd">DROP [item]</span> - Drop an item from inventory</div>
-        <div class="help-command"><span class="help-cmd">INVENTORY</span> (or I) - Check your inventory</div>
-        <div class="help-command"><span class="help-cmd">EXAMINE [item]</span> - Look closely at an item</div>
-        <div class="help-command"><span class="help-cmd">OPEN [container]</span> - Open a container</div>
         <div class="help-command"><span class="help-cmd">CLOSE [container]</span> - Close a container</div>
-        <div class="help-command"><span class="help-cmd">UNLOCK [container] WITH [key]</span> - Unlock something</div>
+        <div class="help-command"><span class="help-cmd">DROP [item]</span> - Drop an item from inventory</div>
+        <div class="help-command"><span class="help-cmd">EXAMINE [item]</span> - Look closely at an item</div>
+        <div class="help-command"><span class="help-cmd">GO [direction]</span> - Move in a direction (or use N, S, E, W shortcuts)</div>
+        <div class="help-command"><span class="help-cmd">INVENTORY</span> (or I) - Check your inventory</div>
+        <div class="help-command"><span class="help-cmd">LOCK [container] WITH [key]</span> - Lock something</div>
+        <div class="help-command"><span class="help-cmd">LOOK</span> - Look around or examine something</div>
+        <div class="help-command"><span class="help-cmd">OPEN [container]</span> - Open a container</div>
+        <div class="help-command"><span class="help-cmd">QUEST</span> - View your current quests</div>
+        <div class="help-command"><span class="help-cmd">TAKE [item]</span> - Pick up an item</div>
         <div class="help-command"><span class="help-cmd">USE [item]</span> - Use an item</div>
         <div class="help-command"><span class="help-cmd">WAIT</span> - Wait or pass your turn</div>
+        <div class="help-command"><span class="help-cmd">UNLOCK [container] WITH [key]</span> - Unlock 
+        something</div>
       </div>
       <div class="help-section">
         <h3>TIPS:</h3>
