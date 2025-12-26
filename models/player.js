@@ -11,6 +11,7 @@ class Player {
         
         // Metadata
         this.lastActive = data.lastActive || new Date().toISOString();
+        this.deleted = data.deleted || false; // Soft delete flag
     }
     
     // Generate a GUID for the player
@@ -33,7 +34,8 @@ class Player {
             id: this.id,
             name: this.name,
             createDate: this.createDate,
-            lastActive: this.lastActive
+            lastActive: this.lastActive,
+            deleted: this.deleted
         };
     }
     

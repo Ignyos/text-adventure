@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Adventure Player</title>
+    <title>Text Adventure</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,10 +13,11 @@
         <!-- Main Menu Screen -->
         <div id="menu-screen" class="screen">
             <div class="menu-container">
-                <h1>Text Adventure Player</h1>
+                <h1>Text Adventure</h1>
                 <div class="menu-buttons">
-                    <button id="new-game-btn" class="menu-btn">New Game</button>
+                    <button id="new-game-btn" class="menu-btn">Play New Game</button>
                     <button id="continue-btn" class="menu-btn">Continue Game</button>
+                    <!-- <button id="design-game-btn" class="menu-btn">Design A Game</button> -->
                 </div>
             </div>
         </div>
@@ -65,13 +66,37 @@
             </div>
         </div>
 
+        <!-- Player Management Screen -->
+        <div id="player-management-screen" class="screen hidden">
+            <div class="menu-container">
+                <h2>Manage Players</h2>
+                <div id="player-management-list" class="player-management-list"></div>
+                <button id="back-to-menu-from-players-btn" class="menu-btn">Back to Menu</button>
+            </div>
+        </div>
+
         <!-- Game Screen -->
         <div id="game-screen" class="screen hidden">
             <div id="output-section"></div>
-            <div id="turn-indicator"></div>
             <div id="input-section">
                 <span class="prompt">&gt;</span>
                 <input title="Command Input" type="text" id="command-input" maxlength="200" autocomplete="off" spellcheck="false">
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modal-title">Modal Title</h2>
+                <button id="modal-close-btn" class="modal-close-btn">×</button>
+            </div>
+            <div id="modal-content" class="modal-content">
+                <!-- Content will be injected here -->
+            </div>
+            <div class="modal-footer">
+                <button id="modal-ok-btn" class="menu-btn">OK</button>
             </div>
         </div>
     </div>
@@ -87,6 +112,11 @@
     <script src="game-registry.js"></script>
     <script src="storage.js"></script>
     <script src="game-engine.js"></script>
+    <script src="menu.js"></script>
     <script src="app.js"></script>
+    <script>
+        // Initialize menu
+        const gameMenu = new Menu();
+    </script>
 </body>
 </html>

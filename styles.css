@@ -178,6 +178,11 @@ body {
     color: #ff0;
 }
 
+.turn-indicator {
+    color: #0ff;
+    font-weight: bold;
+}
+
 .error-message {
     color: #f00;
 }
@@ -447,24 +452,370 @@ body {
     cursor: not-allowed;
 }
 
-/* Turn Indicator */
-#turn-indicator {
-    padding: 10px 20px;
-    background-color: #001100;
-    border-top: 1px solid #0f0;
-    border-bottom: 1px solid #0f0;
-    font-size: 1em;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
 .turn-player-color {
     width: 15px;
     height: 15px;
     border-radius: 50%;
     border: 1px solid #0f0;
     display: inline-block;
+}
+/* Hamburger Menu */
+.menu-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background-color: #000;
+    border: 2px solid #0f0;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.menu-button:hover {
+    background-color: #001100;
+    border-color: #0ff;
+    box-shadow: 0 0 15px #0ff;
+}
+
+.menu-button.active {
+    border-color: #0ff;
+    background-color: #002200;
+}
+
+.menu-icon {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 25px;
+}
+
+.menu-icon span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background-color: #0f0;
+    transition: all 0.3s ease;
+}
+
+.menu-button:hover .menu-icon span {
+    background-color: #0ff;
+}
+
+.menu-dropdown {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background-color: #000;
+    border: 2px solid #0f0;
+    border-radius: 5px;
+    z-index: 999;
+    min-width: 200px;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+.menu-dropdown.hidden {
+    display: none;
+}
+
+.menu-item {
+    width: 100%;
+    padding: 15px 20px;
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid #0f0;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.menu-item:last-child {
+    border-bottom: none;
+}
+
+.menu-item:hover {
+    background-color: #0f0;
+    color: #000;
+}
+
+.menu-item:active {
+    background-color: #0ff;
+}
+
+/* Player Management Screen */
+.player-management-list {
+    width: 100%;
+    max-width: 600px;
+    margin: 20px 0;
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 2px solid #0f0;
+    border-radius: 5px;
+    background-color: #001100;
+}
+
+.player-management-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border-bottom: 1px solid #0f0;
+    transition: background-color 0.2s ease;
+}
+
+.player-management-item:last-child {
+    border-bottom: none;
+}
+
+.player-management-item:hover {
+    background-color: #002200;
+}
+
+.player-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.player-info .player-name-display {
+    font-size: 1.2em;
+    color: #0ff;
+}
+
+.player-info .player-meta {
+    font-size: 0.85em;
+    color: #0a0;
+}
+
+.player-rename-form {
+    display: none;
+    flex: 1;
+    gap: 10px;
+}
+
+.player-rename-form.active {
+    display: flex;
+}
+
+.player-rename-input {
+    flex: 1;
+    padding: 8px;
+    background-color: #000;
+    border: 2px solid #0f0;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+    border-radius: 3px;
+}
+
+.player-rename-input:focus {
+    outline: none;
+    border-color: #0ff;
+    box-shadow: 0 0 5px #0ff;
+}
+
+.player-management-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.player-action-btn {
+    padding: 8px 16px;
+    background-color: transparent;
+    border: 2px solid #0f0;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.player-action-btn:hover {
+    background-color: #0f0;
+    color: #000;
+}
+
+.player-action-btn.danger {
+    border-color: #f00;
+    color: #f00;
+}
+
+.player-action-btn.danger:hover {
+    background-color: #f00;
+    color: #000;
+}
+
+.player-action-btn.success {
+    border-color: #0ff;
+    color: #0ff;
+}
+
+.player-action-btn.success:hover {
+    background-color: #0ff;
+    color: #000;
+}
+
+.player-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.player-action-btn:disabled:hover {
+    background-color: transparent;
+    color: #0f0;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(3px);
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-container {
+    background-color: #000;
+    border: 3px solid #0f0;
+    border-radius: 8px;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #0f0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #0ff;
+    font-size: 1.5em;
+    text-shadow: 0 0 10px #0ff;
+}
+
+.modal-close-btn {
+    background: transparent;
+    border: 2px solid #0f0;
+    color: #0f0;
+    font-size: 2em;
+    width: 40px;
+    height: 40px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    line-height: 1;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background-color: #0f0;
+    color: #000;
+}
+
+.modal-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 2px solid #0f0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Help Content Styles */
+.help-section {
+    margin-bottom: 25px;
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+}
+
+.help-section h3 {
+    color: #0ff;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    text-shadow: 0 0 5px #0ff;
+}
+
+.help-command {
+    padding: 8px 0;
+    border-bottom: 1px solid #0a0;
+    line-height: 1.6;
+}
+
+.help-command:last-child {
+    border-bottom: none;
+}
+
+.help-cmd {
+    color: #0ff;
+    font-weight: bold;
+}
+
+.help-tip {
+    padding: 6px 0;
+    padding-left: 10px;
+    line-height: 1.6;
+    color: #0a0;
+}
+
+/* Menu Item Disabled State */
+.menu-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.menu-item.disabled:hover {
+    background-color: transparent;
+    color: #0f0;
 }

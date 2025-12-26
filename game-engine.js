@@ -16,6 +16,7 @@ class GameEngine {
             'DOWN': ['down', 'd', 'climb down'],
             'TAKE': ['take', 'get', 'grab', 'pick up', 'pick', 'acquire'],
             'DROP': ['drop', 'discard', 'put down', 'leave'],
+            'END': ['end', 'end turn', 'wait', 'pass'],
             'INVENTORY': ['inventory', 'i', 'inv'],
             'EXAMINE': ['examine', 'ex', 'x', 'inspect', 'look at', 'check'],
             'OPEN': ['open', 'look inside', 'look in'],
@@ -132,21 +133,21 @@ class GameEngine {
         const command = input.trim();
         
         if (!command) {
-            return "Please enter a command.";
+            return { response: "Please enter a command.", consumesTurn: false };
         }
         
         // Tokenize the input
         const tokens = this.tokenize(command);
         
         if (tokens.length === 0) {
-            return "I don't understand that.";
+            return { response: "I don't understand that.", consumesTurn: false };
         }
         
         // Try to match command patterns
         const result = this.matchPattern(tokens);
         
         if (result.error) {
-            return result.error;
+            return { response: result.error, consumesTurn: false };
         }
         
         // Execute the matched command
@@ -297,33 +298,56 @@ class GameEngine {
     executeCommand(parsed) {
         const { verb, quantity, directObject, indirectObject, preposition } = parsed;
         
+        // Commands that don't consume a turn (informational commands)
+        const nonTurnCommands = ['LOOK', 'INVENTORY', 'EXAMINE', 'TAKE', 'DROP', 'OPEN', 'UNLOCK', 'CLOSE', 'USE', 'PUT'];
+        const consumesTurn = !nonTurnCommands.includes(verb);
+        
+        let response;
+        
         // Dispatch to appropriate handler
         switch (verb) {
             case 'LOOK':
-                return this.cmdLook(directObject);
+                response = this.cmdLook(directObject);
+                break;
             case 'GO':
-                return this.cmdGo(directObject);
+                response = this.cmdGo(directObject);
+                break;
             case 'TAKE':
-                return this.cmdTake(directObject, indirectObject, preposition, quantity);
+                response = this.cmdTake(directObject, indirectObject, preposition, quantity);
+                break;
             case 'DROP':
-                return this.cmdDrop(directObject, quantity);
+                response = this.cmdDrop(directObject, quantity);
+                break;
             case 'INVENTORY':
-                return this.cmdInventory();
+                response = this.cmdInventory();
+                break;
             case 'EXAMINE':
-                return this.cmdExamine(directObject);
+                response = this.cmdExamine(directObject);
+                break;
             case 'OPEN':
-                return this.cmdOpen(directObject);
+                response = this.cmdOpen(directObject);
+                break;
+            case 'END':
+                response = this.cmdEndTurn(); // end players turn
+                break;
             case 'UNLOCK':
-                return this.cmdUnlock(directObject, indirectObject, preposition);
+                response = this.cmdUnlock(directObject, indirectObject, preposition);
+                break;
             case 'CLOSE':
-                return this.cmdClose(directObject);
+                response = this.cmdClose(directObject);
+                break;
             case 'USE':
-                return this.cmdUse(directObject, indirectObject, preposition);
+                response = this.cmdUse(directObject, indirectObject, preposition);
+                break;
             case 'PUT':
-                return this.cmdPut(directObject, indirectObject, preposition);
+                response = this.cmdPut(directObject, indirectObject, preposition);
+                break;
             default:
-                return `I don't know how to ${verb.toLowerCase()}.`;
+                response = `I don't know how to ${verb.toLowerCase()}.`;
+                break;
         }
+        
+        return { response, consumesTurn };
     }
     
     // ===== COMMAND HANDLERS =====
@@ -634,6 +658,11 @@ class GameEngine {
         });
         
         return output.join('\n');
+    }
+
+    // END TURN command
+    cmdEndTurn() {
+        return "You end your turn.";
     }
     
     // UNLOCK command

@@ -20,6 +20,7 @@ class TextAdventureApp {
         this.gameSelectScreen = document.getElementById('game-select-screen');
         this.saveSelectScreen = document.getElementById('save-select-screen');
         this.playerSelectScreen = document.getElementById('player-select-screen');
+        this.playerManagementScreen = document.getElementById('player-management-screen');
         this.gameScreen = document.getElementById('game-screen');
 
         // Buttons
@@ -28,6 +29,7 @@ class TextAdventureApp {
         this.backToMenuBtn = document.getElementById('back-to-menu-btn');
         this.backToMenuBtn2 = document.getElementById('back-to-menu-btn-2');
         this.backToGamesBtn = document.getElementById('back-to-games-btn');
+        this.backToMenuFromPlayersBtn = document.getElementById('back-to-menu-from-players-btn');
         this.addNewPlayerBtn = document.getElementById('add-new-player-btn');
         this.addExistingPlayerBtn = document.getElementById('add-existing-player-btn');
         this.startGameBtn = document.getElementById('start-game-btn');
@@ -37,6 +39,7 @@ class TextAdventureApp {
         this.saveList = document.getElementById('save-list');
         this.selectedPlayersList = document.getElementById('selected-players-list');
         this.existingPlayersSelect = document.getElementById('existing-players-select');
+        this.playerManagementList = document.getElementById('player-management-list');
 
         // Input elements
         this.playerNameInput = document.getElementById('player-name-input');
@@ -48,6 +51,13 @@ class TextAdventureApp {
         
         // Toast container
         this.toastContainer = document.getElementById('toast-container');
+        
+        // Modal elements
+        this.modalOverlay = document.getElementById('modal-overlay');
+        this.modalTitle = document.getElementById('modal-title');
+        this.modalContent = document.getElementById('modal-content');
+        this.modalCloseBtn = document.getElementById('modal-close-btn');
+        this.modalOkBtn = document.getElementById('modal-ok-btn');
         
         // Game session state
         this.selectedGame = null;
@@ -84,6 +94,20 @@ class TextAdventureApp {
         }, 3000);
     }
 
+    // Show modal
+    showModal(title, content) {
+        this.modalTitle.textContent = title;
+        this.modalContent.innerHTML = content;
+        this.modalOverlay.classList.remove('hidden');
+    }
+
+    // Hide modal
+    hideModal() {
+        this.modalOverlay.classList.add('hidden');
+        this.modalContent.innerHTML = '';
+        this.modalTitle.textContent = '';
+    }
+
     // Attach event listeners
     attachEventListeners() {
         this.newGameBtn.addEventListener('click', () => this.showGameSelect());
@@ -91,6 +115,7 @@ class TextAdventureApp {
         this.backToMenuBtn.addEventListener('click', () => this.showMenu());
         this.backToMenuBtn2.addEventListener('click', () => this.showMenu());
         this.backToGamesBtn.addEventListener('click', () => this.showGameSelect());
+        this.backToMenuFromPlayersBtn.addEventListener('click', () => this.showMenu());
         
         this.addNewPlayerBtn.addEventListener('click', () => this.addNewPlayer());
         this.addExistingPlayerBtn.addEventListener('click', () => this.addExistingPlayer());
@@ -105,6 +130,15 @@ class TextAdventureApp {
         this.commandInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.handleCommand();
+            }
+        });
+        
+        // Modal event listeners
+        this.modalCloseBtn.addEventListener('click', () => this.hideModal());
+        this.modalOkBtn.addEventListener('click', () => this.hideModal());
+        this.modalOverlay.addEventListener('click', (e) => {
+            if (e.target === this.modalOverlay) {
+                this.hideModal();
             }
         });
     }
@@ -174,6 +208,22 @@ class TextAdventureApp {
     showMenu() {
         this.hideAllScreens();
         this.menuScreen.classList.remove('hidden');
+        
+        // Clear game state
+        this.gameEngine = null;
+        this.currentSaveId = null;
+        this.currentGameId = null;
+        this.selectedPlayers = [];
+        
+        // Clear output section
+        if (this.outputSection) {
+            this.outputSection.innerHTML = '';
+        }
+        
+        // Clear command input
+        if (this.commandInput) {
+            this.commandInput.value = '';
+        }
     }
 
     // Show game selection screen
@@ -188,6 +238,13 @@ class TextAdventureApp {
         this.hideAllScreens();
         this.saveSelectScreen.classList.remove('hidden');
         await this.populateSaveList();
+    }
+
+    // Show player management screen
+    async showPlayerManagement() {
+        this.hideAllScreens();
+        this.playerManagementScreen.classList.remove('hidden');
+        await this.populatePlayerManagementList();
     }
 
     // Populate game list
@@ -269,11 +326,14 @@ class TextAdventureApp {
         try {
             const players = await this.storage.getAllPlayers();
             
+            // Filter out deleted players
+            const activePlayers = players.filter(p => !p.deleted);
+            
             // Get IDs of already selected players
             const selectedPlayerIds = this.selectedPlayers.map(p => p.id);
             
             // Filter out already selected players
-            const availablePlayers = players.filter(p => !selectedPlayerIds.includes(p.id));
+            const availablePlayers = activePlayers.filter(p => !selectedPlayerIds.includes(p.id));
             
             this.existingPlayersSelect.innerHTML = '<option value="">Select existing player...</option>';
             
@@ -373,6 +433,151 @@ class TextAdventureApp {
         await this.populateExistingPlayers();
     }
 
+    // Populate player management list
+    async populatePlayerManagementList() {
+        try {
+            const allPlayers = await this.storage.getAllPlayers();
+            
+            // Filter out deleted players
+            const activePlayers = allPlayers.filter(p => !p.deleted);
+            
+            this.playerManagementList.innerHTML = '';
+            
+            if (activePlayers.length === 0) {
+                this.playerManagementList.innerHTML = '<div class="no-items-message" style="padding: 20px; text-align: center;">No players found. Create players when starting a new game.</div>';
+                return;
+            }
+            
+            activePlayers.forEach(player => {
+                const item = document.createElement('div');
+                item.className = 'player-management-item';
+                item.dataset.playerId = player.id;
+                
+                const created = new Date(player.createDate).toLocaleDateString();
+                const lastActive = new Date(player.lastActive).toLocaleDateString();
+                
+                item.innerHTML = `
+                    <div class="player-info">
+                        <div class="player-name-display">${player.name}</div>
+                        <div class="player-meta">Created: ${created} | Last Active: ${lastActive}</div>
+                    </div>
+                    <form class="player-rename-form">
+                        <input type="text" class="player-rename-input" value="${player.name}" maxlength="30">
+                        <button type="submit" class="player-action-btn success">Save</button>
+                        <button type="button" class="player-action-btn cancel-rename-btn">Cancel</button>
+                    </form>
+                    <div class="player-management-actions">
+                        <button class="player-action-btn rename-btn">Rename</button>
+                        <button class="player-action-btn danger delete-btn">Delete</button>
+                    </div>
+                `;
+                
+                // Get elements
+                const renameBtn = item.querySelector('.rename-btn');
+                const deleteBtn = item.querySelector('.delete-btn');
+                const renameForm = item.querySelector('.player-rename-form');
+                const playerInfo = item.querySelector('.player-info');
+                const actions = item.querySelector('.player-management-actions');
+                const cancelRenameBtn = item.querySelector('.cancel-rename-btn');
+                const renameInput = item.querySelector('.player-rename-input');
+                
+                // Rename button
+                renameBtn.addEventListener('click', () => {
+                    playerInfo.style.display = 'none';
+                    actions.style.display = 'none';
+                    renameForm.classList.add('active');
+                    renameInput.focus();
+                    renameInput.select();
+                });
+                
+                // Cancel rename
+                cancelRenameBtn.addEventListener('click', () => {
+                    renameForm.classList.remove('active');
+                    playerInfo.style.display = 'flex';
+                    actions.style.display = 'flex';
+                    renameInput.value = player.name;
+                });
+                
+                // Save rename
+                renameForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const newName = renameInput.value.trim();
+                    
+                    if (!newName) {
+                        this.showToast('Player name cannot be empty.', 'error');
+                        return;
+                    }
+                    
+                    if (newName === player.name) {
+                        // No change
+                        renameForm.classList.remove('active');
+                        playerInfo.style.display = 'flex';
+                        actions.style.display = 'flex';
+                        return;
+                    }
+                    
+                    await this.renamePlayer(player.id, newName);
+                });
+                
+                // Delete button
+                deleteBtn.addEventListener('click', async () => {
+                    if (confirm(`Are you sure you want to delete ${player.name}? They will no longer appear in player lists, but existing games with this player will still work.`)) {
+                        await this.deletePlayer(player.id);
+                    }
+                });
+                
+                this.playerManagementList.appendChild(item);
+            });
+        } catch (error) {
+            console.error('Error populating player management list:', error);
+            this.showToast('Failed to load players.', 'error');
+        }
+    }
+
+    // Rename a player
+    async renamePlayer(playerId, newName) {
+        try {
+            const player = await this.storage.getPlayer(playerId);
+            
+            if (!player) {
+                this.showToast('Player not found.', 'error');
+                return;
+            }
+            
+            player.name = newName;
+            player.updateActivity();
+            await this.storage.savePlayer(player);
+            
+            this.showToast(`Player renamed to ${newName}!`, 'success');
+            await this.populatePlayerManagementList();
+        } catch (error) {
+            console.error('Error renaming player:', error);
+            this.showToast('Failed to rename player.', 'error');
+        }
+    }
+
+    // Soft delete a player
+    async deletePlayer(playerId) {
+        try {
+            const player = await this.storage.getPlayer(playerId);
+            
+            if (!player) {
+                this.showToast('Player not found.', 'error');
+                return;
+            }
+            
+            player.deleted = true;
+            player.updateActivity();
+            await this.storage.savePlayer(player);
+            
+            this.showToast(`${player.name} deleted.`, 'success');
+            await this.populatePlayerManagementList();
+        } catch (error) {
+            console.error('Error deleting player:', error);
+            this.showToast('Failed to delete player.', 'error');
+        }
+    }
+
     // Update the selected players list UI
     updateSelectedPlayersList() {
         this.selectedPlayersList.innerHTML = '';
@@ -435,7 +640,10 @@ class TextAdventureApp {
             this.showGameScreen();
             this.clearOutput();
             this.addOutput(this.gameEngine.getStartText(), 'game-output');
-            this.updateTurnIndicator();
+            
+            // Show whose turn it is
+            const firstPlayer = this.selectedPlayers[0];
+            this.addOutput(`=== ${firstPlayer.name}'s turn ===`, 'turn-indicator');
             
             // Save initial state
             await this.saveGame();
@@ -533,8 +741,14 @@ class TextAdventureApp {
             this.showGameScreen();
             this.clearOutput();
             this.addOutput('=== Game Loaded ===\n', 'system-message');
+            
+            // Show whose turn it is
+            const activePlayer = this.selectedPlayers.find(p => p.id === this.gameEngine.state.activePlayerId);
+            if (activePlayer) {
+                this.addOutput(`**${activePlayer.name}'s turn**`, 'turn-indicator');
+            }
+            
             this.addOutput(this.gameEngine.getLocationDescription(), 'game-output');
-            this.updateTurnIndicator();
         } catch (error) {
             console.error('Error loading game:', error);
             this.showToast('Failed to load saved game.', 'error');
@@ -579,6 +793,7 @@ class TextAdventureApp {
         this.gameSelectScreen.classList.add('hidden');
         this.saveSelectScreen.classList.add('hidden');
         this.playerSelectScreen.classList.add('hidden');
+        this.playerManagementScreen.classList.add('hidden');
         this.gameScreen.classList.add('hidden');
     }
 
@@ -602,11 +817,11 @@ class TextAdventureApp {
         this.commandInput.value = '';
 
         // Process command
-        const response = this.gameEngine.parseCommand(input);
-        this.addOutput(response, 'game-output');
+        const result = this.gameEngine.parseCommand(input);
+        this.addOutput(result.response, 'game-output');
 
-        // Advance to next player's turn (if multiple players)
-        if (this.selectedPlayers.length > 1) {
+        // Advance to next player's turn (if multiple players and command consumes turn)
+        if (this.selectedPlayers.length > 1 && result.consumesTurn) {
             this.addOutput('', 'separator'); // Empty line for readability
             this.advanceToNextPlayer();
         }
@@ -633,10 +848,8 @@ class TextAdventureApp {
         // Set the next player as active
         this.gameEngine.state.setActivePlayer(nextPlayer.id);
         
-        // Update the turn indicator
-        this.updateTurnIndicator();
-        
-        // Show the new player's current location
+        // Show whose turn it is and their current location
+        this.addOutput(`**${nextPlayer.name}'s turn**`, 'turn-indicator');
         this.addOutput(this.gameEngine.getLocationDescription(), 'game-output');
     }
 
@@ -682,5 +895,5 @@ class TextAdventureApp {
 
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new TextAdventureApp();
+    window.app = new TextAdventureApp();
 });

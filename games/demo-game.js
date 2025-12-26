@@ -6,7 +6,7 @@ function getDemoGame() {
     builder.id = 'demo-game';
     builder.setTitle('The Mysterious Cave');
     builder.setAuthor('Ignyos');
-    builder.setVersion('1.0');
+    builder.setVersion('1.1');
     builder.setDescription('Explore a mysterious cave system and find the hidden treasure');
     builder.setObjective('You find yourself at the entrance of a mysterious cave. Your objective is to explore and find the hidden treasure.');
     
@@ -35,7 +35,7 @@ function getDemoGame() {
     builder.addLocation({
         id: 'treasure-room',
         name: 'Treasure Room',
-        description: "You've found it! A small chamber with an ornate treasure chest in the center. The chest is locked with a heavy iron padlock.",
+        description: "You've found it! A small chamber with an ornate treasure chest in the center.",
         exits: [
             { direction: 'south', leadsTo: 'main-chamber' }
         ]
