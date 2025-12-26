@@ -96,6 +96,18 @@ class GameEngine {
             return "ERROR: Location not found.";
         }
         
+        // Check if location requires light and if any player has a light source
+        if (location.requiresLight) {
+            const playersHere = this.state.getPlayersAtLocation(currentLocation);
+            const hasLight = playersHere.some(playerId => {
+                return this.playerHasItemWithTag(playerId, 'light-source');
+            });
+            
+            if (!hasLight) {
+                return `**${location.name}**\nIt's pitch black. You can't see anything. You need a light source.`;
+            }
+        }
+        
         let output = [`**${location.name}**`, location.description];
         
         // List unique items at this location
@@ -103,7 +115,7 @@ class GameEngine {
         if (uniqueItems.length > 0) {
             const visibleItems = uniqueItems
                 .map(id => this.game.getUniqueItem(id))
-                .filter(item => item && item.visible);
+                .filter(item => item && this.isItemVisible(item, currentLocation));
             
             if (visibleItems.length > 0) {
                 output.push('\nYou see: ' + visibleItems.map(item => item.name).join(', '));
@@ -126,10 +138,17 @@ class GameEngine {
             }
         }
         
-        // List obvious exits
+        // List obvious exits (filter out hidden exits that aren't revealed)
         if (location.exits && location.exits.length > 0) {
-            const exitDirs = location.exits.map(e => e.direction).join(', ');
-            output.push(`\nObvious exits: ${exitDirs}`);
+            const visibleExits = location.exits.filter(exit => {
+                if (!exit.hidden) return true; // Not hidden, always visible
+                return this.isExitRevealed(currentLocation, exit);
+            });
+            
+            if (visibleExits.length > 0) {
+                const exitDirs = visibleExits.map(e => e.direction).join(', ');
+                output.push(`\nObvious exits: ${exitDirs}`);
+            }
         }
         
         // Check for quest discovery triggers
@@ -1056,6 +1075,136 @@ class GameEngine {
         
         // Check if all search words appear in item name
         return searchWords.every(sw => itemWords.some(iw => iw.startsWith(sw)));
+    }
+    
+    // Check if a hidden exit should be revealed
+    isExitRevealed(locationId, exit) {
+        if (!exit.hidden) return true; // Not hidden
+        if (!exit.revealCondition) return false; // Hidden with no reveal condition
+        
+        const condition = exit.revealCondition;
+        
+        switch (condition.type) {
+            case 'has-item':
+                if (condition.anyPlayerAtLocation) {
+                    // Check if ANY player at this location has the item
+                    const playersAtLocation = Object.keys(this.state.players).filter(
+                        playerId => {
+                            const playerData = this.state.players[playerId];
+                            const playerLocation = playerData.currentLocation; // Fixed: use currentLocation
+                            return playerLocation === locationId;
+                        }
+                    );
+                    const result = playersAtLocation.some(playerId => {
+                        const hasItem = this.state.isUniqueItemInInventory(condition.itemId, playerId);
+                        return hasItem;
+                    });
+                    return result;
+                } else {
+                    // Check if current player has the item
+                    return this.state.isUniqueItemInInventory(condition.itemId);
+                }
+                
+            case 'has-item-with-tag':
+                if (condition.anyPlayerAtLocation) {
+                    // Check if ANY player at this location has an item with the tag
+                    const playersAtLocation = Object.keys(this.state.players).filter(
+                        playerId => this.state.players[playerId].currentLocation === locationId
+                    );
+                    return playersAtLocation.some(playerId => {
+                        return this.playerHasItemWithTag(playerId, condition.tag);
+                    });
+                } else {
+                    // Check if current player has an item with the tag
+                    return this.playerHasItemWithTag(this.state.activePlayerId, condition.tag);
+                }
+                
+            case 'flag-set':
+                return this.state.getFlag(condition.flagName) === true;
+                
+            case 'custom':
+                if (typeof condition.check === 'function') {
+                    return condition.check(this.state);
+                }
+                return false;
+                
+            default:
+                return false;
+        }
+    }
+    
+    // Check if an item should be visible
+    isItemVisible(item, locationId) {
+        // If item doesn't have base visibility, it's never visible
+        if (!item.visible) return false;
+        
+        // Check for visibility condition
+        if (item.visibilityCondition) {
+            const condition = item.visibilityCondition;
+            
+            switch (condition.type) {
+                case 'player-at-location':
+                    // Visible if any player is at the specified location
+                    const playersAtLocation = Object.keys(this.state.players).filter(
+                        playerId => this.state.players[playerId].currentLocation === (condition.locationId || locationId)
+                    );
+                    return playersAtLocation.length > 0;
+                    
+                case 'has-item':
+                    if (condition.anyPlayerAtLocation) {
+                        const playersAtLocation = Object.keys(this.state.players).filter(
+                            playerId => this.state.players[playerId].currentLocation === locationId
+                        );
+                        return playersAtLocation.some(playerId => 
+                            this.state.isUniqueItemInInventory(condition.itemId, playerId)
+                        );
+                    } else {
+                        return this.state.isUniqueItemInInventory(condition.itemId);
+                    }
+                    
+                case 'has-item-with-tag':
+                    if (condition.anyPlayerAtLocation) {
+                        const playersAtLocation = Object.keys(this.state.players).filter(
+                            playerId => this.state.players[playerId].currentLocation === locationId
+                        );
+                        return playersAtLocation.some(playerId => 
+                            this.playerHasItemWithTag(playerId, condition.tag)
+                        );
+                    } else {
+                        return this.playerHasItemWithTag(this.state.activePlayerId, condition.tag);
+                    }
+                    
+                case 'flag-set':
+                    return this.state.getFlag(condition.flagName) === true;
+                    
+                case 'custom':
+                    if (typeof condition.check === 'function') {
+                        return condition.check(this.state);
+                    }
+                    return false;
+                    
+                default:
+                    return true;
+            }
+        }
+        
+        // No visibility condition, use base visibility
+        return true;
+    }
+    
+    // Check if a player has an item with a specific tag
+    playerHasItemWithTag(playerId, tag) {
+        // Get all unique items in player's inventory
+        const inventoryKey = `inventory-${playerId}`;
+        const itemsInInventory = Object.keys(this.state.uniqueItemLocations).filter(
+            itemId => this.state.uniqueItemLocations[itemId] === inventoryKey
+        );
+        
+        // Check if any item has the required tag
+        return itemsInInventory.some(itemId => {
+            const item = this.game.getUniqueItem(itemId);
+            return item && item.tags && item.tags.includes(tag);
+        });
     }
     
     // QUEST command - List or view quests

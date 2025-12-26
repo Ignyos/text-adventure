@@ -24,7 +24,7 @@ function getDemoGame() {
     builder.addLocation({
         id: 'main-chamber',
         name: 'Main Chamber',
-        description: 'You are in a large chamber with high ceilings. Stalactites hang from above, and the sound of dripping water echoes throughout. There are passages to the north and east, and the entrance is to the south. Something glints on the ground near the center of the chamber.',
+        description: 'You are in a large chamber with high ceilings. Stalactites hang from above, and the sound of dripping water echoes throughout. There are passages to the north and east, and the entrance is to the south.',
         exits: [
             { direction: 'north', leadsTo: 'treasure-room' },
             { direction: 'east', leadsTo: 'dark-tunnel' },
@@ -45,6 +45,7 @@ function getDemoGame() {
         id: 'dark-tunnel',
         name: 'Dark Tunnel',
         description: "You are in a narrow, winding tunnel. It's very dark here, and the walls are damp and cold. The tunnel continues to the east, or you can go back west to the main chamber.",
+        requiresLight: true,
         exits: [
             { direction: 'west', leadsTo: 'main-chamber' },
             { direction: 'east', leadsTo: 'dead-end' }
@@ -55,6 +56,7 @@ function getDemoGame() {
         id: 'dead-end',
         name: 'Dead End',
         description: "The tunnel comes to an abrupt end. The walls are solid rock with no way forward. You'll need to go back west.",
+        requiresLight: true,
         exits: [
             { direction: 'west', leadsTo: 'dark-tunnel' }
         ]
@@ -111,7 +113,7 @@ function getDemoGame() {
         id: 'rusty-key',
         name: 'Rusty Key',
         description: 'A small rusty key.',
-        location: 'main-chamber',
+        location: 'dead-end',
         takeable: true,
         visible: true,
         examineText: 'The key is heavily rusted but still functional. It looks like it might fit a simple lock.',
@@ -159,6 +161,7 @@ function getDemoGame() {
         takeable: true,
         visible: true,
         usable: true,
+        tags: ['light-source'],
         examineText: 'The lantern is rusty but might still work. It has a small amount of oil left.',
         takeText: 'You pick up the rusty lantern.',
         useText: 'You light the lantern. It flickers to life, casting a warm glow.'

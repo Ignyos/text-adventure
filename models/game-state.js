@@ -163,6 +163,13 @@ class GameState {
         return player ? player.currentLocation : null;
     }
     
+    // Get all players at a specific location
+    getPlayersAtLocation(locationId) {
+        return Object.keys(this.players).filter(playerId => {
+            return this.players[playerId].currentLocation === locationId;
+        });
+    }
+    
     // ===== Player Movement =====
     
     movePlayer(locationId, playerId = null) {

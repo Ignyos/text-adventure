@@ -17,8 +17,10 @@ class UniqueItem {
         // Item properties
         this.takeable = data.takeable !== undefined ? data.takeable : true;  // Can be picked up?
         this.visible = data.visible !== undefined ? data.visible : true;     // Can be seen?
+        this.visibilityCondition = data.visibilityCondition || null;         // Condition for visibility
         this.usable = data.usable || false;                                  // Can be used?
         this.consumable = data.consumable || false;                          // Destroyed on use?
+        this.tags = data.tags || [];                                         // Tags for categorization (e.g., 'light-source', 'weapon', 'key')
         
         // Container properties
         this.isContainer = data.isContainer || false;                        // Can hold generic items?

@@ -69,12 +69,8 @@ class GameBuilder {
             return { success: false, error: `Location with id '${location.id}' already exists` };
         }
         
-        this.locations.push({
-            id: location.id,
-            name: location.name,
-            description: location.description,
-            exits: location.exits || []
-        });
+        // Store the complete location object with all properties
+        this.locations.push(location);
         
         return { success: true };
     }

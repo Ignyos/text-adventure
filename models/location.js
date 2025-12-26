@@ -14,6 +14,9 @@ class Location {
         // Exits - array of {direction, leadsTo, [locked], [lockedMessage], [requiredItem]}
         this.exits = data.exits || [];
         
+        // Light requirement - if true, location is dark and requires a light source to see
+        this.requiresLight = data.requiresLight || false;
+        
         // Optional properties
         this.examineText = data.examineText || null;  // Additional detail when examined
         this.onEnter = data.onEnter || null;          // Script/function when entering
@@ -91,5 +94,11 @@ class Location {
 //   leadsTo: 'location-id',
 //   locked: false,              // optional - is this exit locked?
 //   lockedMessage: 'text',      // optional - message when trying locked exit
-//   requiredItem: 'key-id'      // optional - item needed to unlock
+//   requiredItem: 'key-id',     // optional - item needed to unlock
+//   hidden: false,              // optional - is this exit hidden from obvious exits list?
+//   revealCondition: {          // optional - condition to reveal hidden exit
+//     type: 'has-item',         // 'has-item', 'flag-set', 'custom'
+//     itemId: 'item-id',        // for 'has-item' type
+//     anyPlayerAtLocation: true // if true, any player at location having item reveals it
+//   }
 // }

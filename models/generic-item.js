@@ -11,6 +11,7 @@ class GenericItem {
         this.name = data.name;                                      // Singular form
         this.namePlural = data.namePlural || `${data.name}s`;       // Plural form
         this.description = data.description || '';
+        this.tags = data.tags || [];                                // Tags for categorization
         
         // Display text
         this.examineText = data.examineText || this.description;
