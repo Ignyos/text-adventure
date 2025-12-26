@@ -95,13 +95,22 @@ body {
     padding: 15px;
     margin: 10px 0;
     border: 1px solid #0f0;
-    cursor: pointer;
+    display: flex;
+    align-items: center;
     transition: all 0.3s;
 }
 
 .selection-item:hover {
-    background-color: #0f0;
-    color: #000;
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.selection-item-content {
+    flex: 1;
+    cursor: pointer;
+}
+
+.selection-item-content:hover {
+    color: #0f0;
 }
 
 .selection-item-title {
@@ -113,6 +122,22 @@ body {
 .selection-item-info {
     font-size: 0.9em;
     opacity: 0.8;
+}
+
+.delete-save-btn {
+    padding: 8px 12px;
+    background: #d9534f;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    transition: background 0.3s;
+}
+
+.delete-save-btn:hover {
+    background: #c9302c;
 }
 
 .no-items-message {

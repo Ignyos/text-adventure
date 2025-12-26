@@ -311,10 +311,24 @@ class TextAdventureApp {
                 const playersText = playerNames.length > 0 ? ` | Players: ${playerNames.join(', ')}` : '';
                 
                 item.innerHTML = `
-                    <div class="selection-item-title">${save.gameTitle}</div>
-                    <div class="selection-item-info">Saved: ${date}${playersText}</div>
+                    <div class="selection-item-content" style="flex: 1; cursor: pointer;">
+                        <div class="selection-item-title">${save.gameTitle}</div>
+                        <div class="selection-item-info">Saved: ${date}${playersText}</div>
+                    </div>
+                    <button class="delete-save-btn" data-save-id="${save.id}" style="margin-left: 10px; padding: 8px 12px; background: #d9534f; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
                 `;
-                item.addEventListener('click', () => this.loadGame(save));
+                
+                // Add click handler for loading the game (only on the content area)
+                const contentArea = item.querySelector('.selection-item-content');
+                contentArea.addEventListener('click', () => this.loadGame(save));
+                
+                // Add click handler for delete button
+                const deleteBtn = item.querySelector('.delete-save-btn');
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation(); // Prevent triggering the load game handler
+                    await this.deleteSave(save.id);
+                });
+                
                 this.saveList.appendChild(item);
             }
         } catch (error) {
@@ -711,6 +725,25 @@ class TextAdventureApp {
         } catch (error) {
             console.error('Error loading game:', error);
             this.showToast('Failed to start game. Please try again.', 'error');
+        }
+    }
+
+    // Delete a saved game
+    async deleteSave(saveId) {
+        // Confirm deletion
+        if (!confirm('Are you sure you want to delete this save? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await this.storage.deleteSave(saveId);
+            this.showToast('Save deleted successfully', 'success');
+            
+            // Refresh the save list
+            await this.populateSaveList();
+        } catch (error) {
+            console.error('Error deleting save:', error);
+            this.showToast('Failed to delete save', 'error');
         }
     }
 
